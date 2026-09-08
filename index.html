@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>
+/* ══ THE FORWARD ══════════════════════════════════════════════════════════
+   THIS IS THE LITERAL FIRST ELEMENT OF <head> AND MUST STAY THERE — before
+   the charset, before the stylesheet, before the fonts. HTML parsing is
+   streaming, so this runs the moment the first chunk of the document lands
+   and nothing else is ever requested. A remembered sector is a decision the
+   visitor already made; re-asking it is a toll.
+
+   `location.replace`, NEVER `location.href` — with href, Back returns here,
+   this forwards again, and the visitor is trapped.
+
+   NO PROBE ON THIS PATH. The probe rides the deliberate paths, where a beat
+   already exists. This one is optimised to the millisecond.
+
+   The address comes from this origin's own storage and NEVER from the URL:
+   a `?go=` would be an open redirect anyone could hand out in a link. It is
+   re-validated as a bare hostname before use, because a stale or mangled
+   value must not be able to steer the replace.
+
+   `?scan` never forwards. It is half the escape hatch (the other half is a
+   way back from inside a sector) and the address the in-sector control
+   returns to. ASCII only, so it is safe ahead of the charset below. */
+(function () {
+  try {
+    if (/(^|[?&])scan(=|&|$)/.test(location.search)) return;
+    var h = localStorage.getItem("voidline.scan.sector");
+    if (h && h.length < 254 &&
+        /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(h)) {
+      location.replace("https://" + h + "/");
+    }
+  } catch (e) { /* no storage (private mode, blocked): show the scan */ }
+})();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Voidline · Sector Scan</title>
+<meta name="description" content="A passive scan of the Voidline sectors that announce themselves.">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Martian+Mono:wght@400;600;800&display=swap">
+<style>
+:root{
+  --ground:#000503;
+  --cyan:#4ee8d4;
+  --cyan-dim:rgba(78,232,212,0.55);
+  --cyan-lo:rgba(78,232,212,0.18);
+  --cyan-frame:rgba(78,232,212,0.42);
+  --silence:#c0cac6;
+  --silence-lo:rgba(192,202,198,0.55);
+  /* TEXT and HAIRLINES are different jobs and must not share a token. A
+     border can live at 0.22 and read fine; type at 0.22 is unreadable.
+     Collapsing these shipped a page nobody could read. */
+  --txt:#c0cac6;
+  --txt-2:rgba(192,202,198,0.76);
+  --txt-3:rgba(192,202,198,0.56);
+  --silence-hair:rgba(192,202,198,0.22);
+  --red:#ff3030;
+  --mono:"JetBrains Mono","Courier New",monospace;
+  --stencil:"Martian Mono","JetBrains Mono",monospace;
+}
+/* NO SECTOR HUE IS A TOKEN HERE. A sector's colour is its own, it arrives
+   from the data file at runtime, and the instrument's palette does not know
+   it — baking one in would make one sector's sky into network furniture. */
+*{box-sizing:border-box}
+/* An author display rule outranks the UA [hidden] rule, and .threshold sets
+   display:flex — without this the overlay is on screen from the first paint. */
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+.frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
+
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
+.mark{font-family:var(--stencil);font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--cyan);white-space:nowrap}
+.mark .sep{color:var(--txt-3);margin:0 .5em}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.meta{font-size:10px;letter-spacing:.14em;color:var(--txt-2);font-variant-numeric:tabular-nums}
+.live{font-size:10px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
+.live i{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bp 2.4s ease-in-out infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.25}}
+.brk{font-family:var(--mono);font-size:10px;letter-spacing:.13em;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);padding:5px 9px;cursor:pointer;transition:color .16s,border-color .16s}
+.brk:hover,.brk:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
+
+.stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+#viz{display:block;width:100%;height:100%}
+.corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
+.c-tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.c-tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.c-bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.c-br{bottom:12px;right:12px;border-left:0;border-top:0}
+.stage-tag{position:absolute;top:14px;left:38px;pointer-events:none;display:flex;flex-direction:column;gap:5px}
+.stage-tag span{font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);text-transform:uppercase}
+
+.key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
+.key-sw{width:26px;display:flex;align-items:center;gap:3px;flex:0 0 auto}
+/* THREE PIPS IN THREE HUES, and none of them a sector's. The invariant a
+   reader must take away is "each sector has its own colour", not "this
+   colour means live" — a single swatch would teach the wrong one. */
+.pip{width:5px;height:5px;border-radius:50%}
+.p1{background:#ff9a3c}.p2{background:#8fd0ff}.p3{background:#7de8a8}
+.key-hollow{width:7px;height:7px;border-radius:50%;border:1px solid rgba(192,202,198,0.5)}
+.key-faint{width:5px;height:5px;border-radius:50%;background:rgba(192,202,198,0.20)}
+
+/* FIXED height — the readout must never resize the stage. A growing readout
+   shrinks the canvas, which re-lays the whole map out from under the pointer
+   that caused it. Facts run on a single non-wrapping line. */
+.readout{flex:0 0 auto;border-top:1px solid var(--cyan-lo);padding:13px 18px;height:96px;display:flex;align-items:center;gap:20px;background:var(--ground);overflow:hidden}
+.ro-idle{font-size:10.5px;letter-spacing:.17em;color:var(--txt-2)}
+.ro-body{display:flex;align-items:baseline;gap:18px;flex:1 1 auto;min-width:0}
+.ro-desig{font-family:var(--stencil);font-weight:800;font-size:26px;letter-spacing:.04em;line-height:1;white-space:nowrap;flex:0 0 auto}
+.ro-facts{display:flex;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;font-size:10.5px;letter-spacing:.13em;color:var(--txt-2);font-variant-numeric:tabular-nums}
+.ro-facts::-webkit-scrollbar{display:none}
+.ro-facts span{white-space:nowrap}
+.ro-facts b{font-weight:500;color:var(--silence)}
+.ro-act{margin-left:auto;flex:0 0 auto}
+.tune{font-family:var(--mono);font-size:11px;letter-spacing:.18em;padding:10px 20px;background:none;border:1px solid var(--cyan-frame);color:var(--cyan);cursor:pointer;transition:background .16s}
+.tune:hover,.tune:focus-visible{background:var(--cyan-lo);outline:none}
+.tune[disabled]{border-color:var(--silence-hair);color:var(--txt-3);cursor:default}
+
+/* THE THRESHOLD — a beat, not a cancellable timer. §04's threshold is about
+   entering a room where people are; it says nothing about navigation
+   latency. You just acted, and a moment of response reads as the machine
+   acknowledging you. The escape hatch is `?scan` plus a way back from inside
+   a sector — neither of which is a countdown to catch. */
+.threshold{position:absolute;inset:0;background:rgba(0,5,3,0.9);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;text-align:center}
+.th-lab{font-size:10px;letter-spacing:.34em;color:var(--cyan-dim)}
+.th-lab.fail{color:var(--red)}
+.th-desig{font-family:var(--stencil);font-weight:800;font-size:clamp(28px,6vw,52px);letter-spacing:.03em;color:var(--silence)}
+.th-addr{font-size:11px;letter-spacing:.2em;color:var(--txt-2)}
+.th-track{width:min(340px,72vw);height:2px;background:var(--silence-hair);overflow:hidden}
+.th-fill{height:100%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);width:0%}
+.th-note{font-size:9.5px;letter-spacing:.16em;color:var(--txt-3);max-width:52ch;line-height:1.7}
+.th-back{font-family:var(--mono);font-size:11px;letter-spacing:.2em;padding:11px 26px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
+.th-back:hover,.th-back:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
+
+/* THE CORRIDOR ADDRESS — it RESOLVES, it never SEARCHES. */
+.corridor{flex:0 0 auto;border-top:1px solid var(--silence-hair);padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--ground)}
+.cor-lab{font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);white-space:nowrap}
+.cor-in{font-family:var(--mono);font-size:11px;letter-spacing:.14em;width:min(230px,42vw);padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
+.cor-in::placeholder{color:var(--txt-3);letter-spacing:.14em}
+.cor-in:focus{outline:none;border-color:var(--cyan-frame)}
+.cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
+.cor-go:hover,.cor-go:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
+.cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3)}
+.seg{display:flex;border:1px solid var(--silence-hair);margin-left:auto}
+.seg button{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:7px 13px;background:none;border:0;color:var(--txt-2);cursor:pointer;transition:color .16s,background .16s}
+.seg button+button{border-left:1px solid var(--silence-hair)}
+.seg button[aria-pressed="true"]{background:var(--cyan-lo);color:var(--cyan)}
+.seg button:focus-visible{outline:1px solid var(--cyan-frame);outline-offset:-1px}
+
+/* The canvas holds itself still in script; this is the one animation CSS owns. */
+@media (prefers-reduced-motion: reduce){.live i{animation:none}}
+
+@media (max-width:960px){.cor-note{display:none}}
+@media (max-width:700px){
+  .ro-desig{font-size:20px}
+  .readout{flex-wrap:wrap;gap:10px;height:140px}
+  .ro-act{margin-left:0;width:100%}
+  .tune{width:100%}
+  .key{display:none}
+  .stage-tag{left:30px}
+  .corridor{gap:9px}
+  .cor-lab{width:100%}
+  .cor-in{flex:1 1 auto;width:auto}
+  .seg{margin-left:0;width:100%}
+  .seg button{flex:1 1 auto}
+}
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <header class="bar">
+    <div class="mark">VOIDLINE<span class="sep">//</span>SECTOR SCAN</div>
+    <div class="bar-right">
+      <button class="brk" id="forgetBtn" type="button" hidden>[ FORGET ]</button>
+      <span class="meta" id="clock">--:--:--</span>
+      <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <canvas id="viz"></canvas>
+    <span class="corner c-tl"></span><span class="corner c-tr"></span>
+    <span class="corner c-bl"></span><span class="corner c-br"></span>
+    <div class="stage-tag">
+      <span>passive &middot; sectors announce themselves</span>
+      <span>ring is declared &middot; not measured &middot; not rank</span>
+    </div>
+
+    <div class="key">
+      <div class="key-row">
+        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
+        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; SELECTABLE
+      </div>
+      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
+      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
+    </div>
+
+    <div class="threshold" id="threshold" role="status" aria-live="polite" hidden>
+      <div class="th-lab" id="thLab">THRESHOLD</div>
+      <div class="th-desig" id="thDesig">R-77</div>
+      <div class="th-addr" id="thAddr">r77.voidline.gg</div>
+      <div class="th-track" id="thTrack"><div class="th-fill" id="thFill"></div></div>
+      <div class="th-note" id="thNote"></div>
+      <button class="th-back" id="thBack" type="button" hidden>[ RETURN TO SCAN ]</button>
+    </div>
+  </main>
+
+  <div class="readout" id="readout"></div>
+
+  <!-- NOT A <form>. A form would put the typed address in the URL on submit,
+       which is the one thing this field must never do. Enter is handled on
+       the input instead. -->
+  <footer class="corridor">
+    <label class="cor-lab" for="corridorInput">CORRIDOR ADDRESS</label>
+    <input class="cor-in" id="corridorInput" type="text" inputmode="url" maxlength="253"
+           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="DESIGNATION OR HOST" aria-describedby="corridorNote">
+    <button class="cor-go" id="corridorGo" type="button">[ RESOLVE ]</button>
+    <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
+    <div class="seg" role="group" aria-label="Orbit projection">
+      <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
+      <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
+    </div>
+  </footer>
+</div>
+
+<script src="sectors.js"></script>
+<script>
+(function(){
+"use strict";
+var REDUCED=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+var CORE_R=0.085;
+var RINGS=[{r:0.235,label:"01 · INNER"},{r:0.395,label:"02"},{r:0.555,label:"03"},
+           {r:0.715,label:"04"},{r:0.875,label:"05 · OUTER RIM"}];
+var LABEL_ANG=200*Math.PI/180;
+
+/* Emission cadence IS the aperture state — an OPEN sector announces itself
+   often, a DRIFTING one rarely. A sector that has gone DARK stops emitting
+   and is simply not here, which is §04 falling out of the mechanism rather
+   than being drawn on top of it. */
+var CADENCE={OPEN:3.2,FOCUSED:5.6,DRIFTING:9.5};
+
+var STORE_HOST="voidline.scan.sector",STORE_LABEL="voidline.scan.label";
+function readStore(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function writeStore(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function dropStore(k){try{localStorage.removeItem(k);}catch(e){}}
+
+/* The data file is edited by the least ceremonial process there is, so what
+   comes out of it is validated once here rather than trusted at every use:
+   a hue is a hex literal or it is nothing, and anything bound for innerHTML
+   goes through esc(). */
+function hexOf(h){h=String(h==null?"":h).trim();return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(h)?h:null;}
+var ESC={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"};
+function esc(v){return String(v==null?"":v).replace(/[&<>"]/g,function(m){return ESC[m];});}
+function rgbOf(hex){
+  var h=String(hex||"").replace("#","");
+  if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
+  return [parseInt(h.slice(0,2),16)||192,parseInt(h.slice(2,4),16)||202,parseInt(h.slice(4,6),16)||198];
+}
+
+/* ── contacts ───────────────────────────────────────────────────────────
+   Declared sectors come from the DATA FILE; unresolved returns are
+   generated, because they are what the instrument picks up and not what
+   anybody announced. They are honest (there will be sealed sectors), they
+   cost nothing, and they make a three-contact map feel like a city. */
+var DECLARED=(window.VOIDLINE_SECTORS||[]).slice();
+var CONTACTS=DECLARED.map(function(s){
+  return s.state==="commissioned"
+    ? {state:"commissioned",seed:s.designation,desig:s.designation,addr:s.address,
+       hue:hexOf(s.hue),rgb:rgbOf(hexOf(s.hue)||"#c0cac6"),aperture:s.aperture||"OPEN",ring:s.ring}
+    : {state:"provisioned",seed:s.key,ring:s.ring};
+});
+for(var u=0;u<8;u++){CONTACTS.push({state:"unresolved",seed:"ret-"+u,ring:null});}
+
+CONTACTS.forEach(function(c){
+  c.bearing=(hash(c.seed)%3600)/10;
+  c.phase=(hash(c.seed+":p")%1000)/1000;
+  c.drift=c.ring===null?(0.30+((hash(c.seed+":d")%1000)/1000)*0.62):0;
+  c.period=c.state==="commissioned"?(CADENCE[c.aperture]||CADENCE.OPEN)
+          :(c.state==="provisioned"?14:6+((hash(c.seed+":c")%1000)/1000)*9);
+  c.lit=0;c.sx=-9999;c.sy=-9999;
+});
+
+/* ── BEARING DE-COLLISION ───────────────────────────────────────────────
+   Two sectors on one ring whose hashes land within a few degrees overlap,
+   and the one underneath becomes unclickable — the exact class of bug the
+   custodian log's geometry pass fixed. Nearest-centre resolution keeps both
+   REACHABLE, but they still read as one mark, so the marks themselves have
+   to be pushed apart.
+
+   DETERMINISTIC, so it is not hand-placement by another name: sort a ring's
+   contacts by hashed bearing, then open every gap under MIN_ARC to exactly
+   MIN_ARC and take that space from the gaps that have it to give, in
+   proportion to what they have. Same input, same output, identical for every
+   viewer, and no float function beyond +,-,* ,/ and % so two browsers cannot
+   disagree. The ring is rebuilt from the first sorted bearing, so a ring with
+   nothing crowded is not touched at all.
+
+   ITERATIVE PAIRWISE PUSH WAS TRIED FIRST AND IS WRONG TWICE. Pushing each
+   too-close pair apart by half the deficit, repeatedly, does not converge
+   near saturation — at 25 contacts on one ring it was still 0.75° short
+   after three hundred passes — and on EXACT ties it moves marks past their
+   neighbours, so the loop then compares pairs that are no longer adjacent,
+   reports itself satisfied, and leaves two contacts on identical pixels.
+   Both failures arrive precisely when the fix is needed. The construction
+   below is exact in one pass and has no iteration count to be wrong about.
+
+   MIN_ARC is tuned to the INNER ring, where a degree buys the fewest pixels
+   (~24px of separation at a typical stage size, against a 5px mark, a 16px
+   hover halo and a label above it). It therefore over-delivers on the rim,
+   which is harmless. Past 360/MIN_ARC contacts on one ring the constraint is
+   unsatisfiable and the ring falls back to an even spread — still derived,
+   still identical everywhere. */
+var MIN_ARC=16;
+function norm(d){return ((d%360)+360)%360;}
+function decollideRing(list){
+  var n=list.length,i;
+  if(n<2){return;}
+  list.sort(function(a,b){return a.bearing-b.bearing||(a.seed<b.seed?-1:1);});
+  var b=list.map(function(c){return norm(c.bearing);});
+
+  /* Gaps around the circle, the wrap gap last, so they sum to 360 even when
+     every bearing is identical — where a plain modulo difference sums to
+     ZERO and the whole calculation quietly collapses. */
+  var g=[];
+  for(i=0;i<n-1;i++){g.push(b[i+1]-b[i]);}
+  g.push(360-(b[n-1]-b[0]));
+
+  var D=0,S=0;
+  for(i=0;i<n;i++){
+    if(g[i]<MIN_ARC){D+=MIN_ARC-g[i];}else{S+=g[i]-MIN_ARC;}
+  }
+  if(D===0){return;}          /* nothing crowds anything: leave the hashes alone */
+
+  var out=[b[0]];
+  if(D>S){
+    /* Unsatisfiable — and because the gaps sum to 360, D>S is exactly
+       n*MIN_ARC>360, so the feasibility test is the arithmetic rather than a
+       second rule that could disagree with it. Spread evenly instead. */
+    var step=360/n;
+    for(i=1;i<n;i++){out.push(norm(b[0]+i*step));}
+  }else{
+    /* Every deficient gap opens to exactly MIN_ARC, and the space comes out
+       of the gaps that have it to give, in proportion to what they have. */
+    var k=(S-D)/S;
+    for(i=1;i<n;i++){
+      var w=g[i-1]<MIN_ARC?MIN_ARC:MIN_ARC+(g[i-1]-MIN_ARC)*k;
+      out.push(norm(out[i-1]+w));
+    }
+  }
+  for(i=0;i<n;i++){list[i].bearing=out[i];}
+}
+(function(){
+  var byRing={};
+  CONTACTS.forEach(function(c){
+    if(c.ring===null){return;}                 /* returns drift; they are not placed */
+    (byRing[c.ring]=byRing[c.ring]||[]).push(c);
+  });
+  Object.keys(byRing).forEach(function(k){decollideRing(byRing[k]);});
+})();
+
+/* Orbits run on ABSOLUTE time (Date.now/Date.UTC are both UTC-based, so a
+   viewer's timezone cannot shift the city) — every viewer sees the same
+   arrangement at the same moment. Periods are KEPLERIAN, T ∝ r^1.5: sectors
+   are sovereign independent deployments, not sections of one engineered
+   wheel, so the rings shear past each other over days. */
+var EPOCH=Date.UTC(2026,0,1);
+var ORBIT_BASE_MIN=40;
+function orbitPeriodMin(ring){return ORBIT_BASE_MIN*Math.pow(RINGS[ring].r/RINGS[0].r,1.5);}
+function fmtPeriod(m){
+  var h=Math.floor(m/60),mm=Math.round(m%60);
+  return h?(h+"h "+("0"+mm).slice(-2)+"m"):(Math.round(m)+"m");
+}
+
+/* The singularity's measurables. Not M87* — a smaller SMBH whose numbers are
+   internally sound: Rs = 2.95 km × (M/M☉), so 1.0×10⁹ km ⇒ ~3.4×10⁸ M☉, and
+   the horizon sits at 6.7 AU — between Jupiter and Saturn. */
+var SING_RS_KM="1.0 × 10⁹ KM";
+var SING_RS_AU="6.7 AU";
+var SING_MASS="3.4 × 10⁸ M☉";
+
+var SNAP=40,hover=null,selected=null,t0=performance.now(),mx=-9999,my=-9999;
+/* THE TRANSFORM SHIPS; THE ZOOM CONTROLS DO NOT. The geometry is in world
+   units behind this one transform so the routing dive can reuse it later,
+   but with three contacts nothing at 3× is illegible at 1×, so scroll-zoom,
+   drag-pan and double-click-reset have not earned their keep yet. */
+var scale=1,ox=0,oy=0;
+var rate=1,vClock=Date.now(),lastFrame=performance.now();
+var CORE={state:"core"};
+
+var cv=document.getElementById("viz"),ctx=cv.getContext("2d"),W=0,H=0,BASE=1;
+function resize(){
+  var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,r.width);H=Math.max(1,r.height);
+  cv.width=Math.round(W*d);cv.height=Math.round(H*d);
+  ctx.setTransform(d,0,0,d,0,0);
+  BASE=Math.min(W,H)*0.42;clampPan();repaintIfStill();
+}
+function cx(){return W/2+ox;}
+function cy(){return H/2+oy;}
+function R(){return BASE*scale;}
+function clampPan(){var lim=BASE*(scale-1)+8;ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));}
+
+function angleOf(c){
+  if(c.ring===null){return c.bearing*Math.PI/180;}
+  var turns=((vClock-EPOCH)/60000)/orbitPeriodMin(c.ring);
+  return (c.bearing+turns*360)*Math.PI/180;
+}
+function radiusOf(c,t){
+  if(c.ring!==null){return RINGS[c.ring].r;}
+  return c.drift+Math.sin(t*0.22+c.phase*6.28)*0.035;
+}
+function pulseAt(c,t){return ((t/c.period)+c.phase)%1;}
+function colorFor(c,a){
+  if(c.rgb){return "rgba("+c.rgb[0]+","+c.rgb[1]+","+c.rgb[2]+","+a+")";}
+  return "rgba(192,202,198,"+a+")";
+}
+
+/* THE STRIP — the classification bar's visual grammar, not its meaning.
+   TWO REJECTED ATTEMPTS, both worth keeping so neither is re-tried:
+   (1) PROXIMITY, cells measuring inward with the last three unfillable. It
+       failed on GEOMETRY — a horizontal strip above a disc cannot express
+       RADIAL distance, since left and right are equally far from the centre
+       beneath it, so there was no "inward" for the axis to mean and the dead
+       cells read as broken pixels rather than as the limit of measurement.
+   (2) A DISCRETE time series, newest sample shifting in from the right. It
+       read as low-fi: everything else on this page moves smoothly, so a
+       stepping element was the loudest thing in the frame, and the vocabulary
+       ("gravimetric") named something nobody recognises.
+   What survives is the SMOOTH per-cell fade, at HALF the original rate, with
+   each cell also carrying a much slower second oscillator. When that one
+   peaks the cell warms toward red — rare, gradual, never a step. Nothing here
+   claims to be a measurement of anything nameable; it is an instrument at
+   rest, which is what §03 means by a surface that is read, not explained. */
+var GV_CELLS=9,GV_W=6,GV_H=9,GV_GAP=3;
+function drawStrip(X,Y,cr,t){
+  var total=GV_CELLS*GV_W+(GV_CELLS-1)*GV_GAP;
+  var x0=X-total/2,y0=Y-cr-GV_H-14;
+  for(var i=0;i<GV_CELLS;i++){
+    var lum=REDUCED?0.5:0.5+0.5*Math.sin(t*(0.80+i*0.145)+i*2.1);
+    var heat=REDUCED?0:0.5+0.5*Math.sin(t*(0.17+i*0.031)+i*4.7);
+    var red=Math.pow(Math.max(0,(heat-0.93)/0.07),3);
+    var cR=Math.round(78+177*red),cG=Math.round(232-184*red),cB=Math.round(212-164*red);
+    var a=Math.min(1,0.14+lum*0.56+red*0.18);
+    ctx.fillStyle="rgba("+cR+","+cG+","+cB+","+a.toFixed(3)+")";
+    ctx.fillRect(x0+i*(GV_W+GV_GAP),y0,GV_W,GV_H);
+  }
+}
+
+function draw(now){
+  var t=REDUCED?0:(now-t0)/1000,dt=Math.min(0.1,(now-lastFrame)/1000);lastFrame=now;
+  /* At LIVE the clock IS absolute time rather than an accumulation of frame
+     deltas, so a long-open tab cannot drift away from what everyone else
+     sees. Only a projection integrates. */
+  vClock=rate===1?Date.now():vClock+dt*1000*rate;
+  var X=cx(),Y=cy(),rad=R(),cr=rad*CORE_R;
+  ctx.clearRect(0,0,W,H);
+  ctx.lineWidth=1;ctx.textAlign="center";
+
+  ctx.strokeStyle="rgba(78,232,212,0.07)";
+  for(var b=0;b<24;b++){
+    var a0=b*Math.PI/12;
+    ctx.beginPath();
+    ctx.moveTo(X+Math.cos(a0)*cr,Y+Math.sin(a0)*cr);
+    ctx.lineTo(X+Math.cos(a0)*rad*0.96,Y+Math.sin(a0)*rad*0.96);
+    ctx.stroke();
+  }
+  RINGS.forEach(function(rg,i){
+    ctx.beginPath();ctx.arc(X,Y,rad*rg.r,0,Math.PI*2);
+    ctx.strokeStyle=i===RINGS.length-1?"rgba(78,232,212,0.15)":"rgba(78,232,212,0.20)";
+    ctx.stroke();
+  });
+
+  /* ── SECTORS EMIT, THE INSTRUMENT LISTENS ────────────────────────────
+     A rotating sweep from the centre was built and rejected: it is a beam
+     coming out of the one object that emits nothing, and it implies one
+     authority surveying many, which is wrong under §02-IV. */
+  if(!REDUCED){
+    CONTACTS.forEach(function(c){
+      var ang=angleOf(c),dist=rad*radiusOf(c,t);
+      var px=X+Math.cos(ang)*dist,py=Y+Math.sin(ang)*dist;
+      var p=pulseAt(c,t);
+      c.lit=Math.max(0,1-p*5);
+      var reach=c.state==="commissioned"?rad*0.30:(c.state==="provisioned"?rad*0.13:rad*0.09);
+      var strength=c.state==="commissioned"?0.30:(c.state==="provisioned"?0.13:0.09);
+      ctx.beginPath();ctx.arc(px,py,4+p*reach,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,(1-p)*strength);ctx.stroke();
+    });
+  } else {
+    CONTACTS.forEach(function(c){c.lit=0.5;});
+  }
+
+  /* ── the singularity: an ABSENCE. Drawn AFTER emissions so nothing passes
+        through it, and it never emits anything of its own. No accretion
+        colour — that would import one sector's sky and collide with
+        another's hue. SINGULARITY, not CORE: nothing inhabits it. ── */
+  var lens=ctx.createRadialGradient(X,Y,cr,X,Y,cr*2.1);
+  lens.addColorStop(0,"rgba(78,232,212,0.07)");lens.addColorStop(1,"rgba(78,232,212,0)");
+  ctx.beginPath();ctx.arc(X,Y,cr*2.1,0,Math.PI*2);ctx.fillStyle=lens;ctx.fill();
+  ctx.beginPath();ctx.arc(X,Y,cr,0,Math.PI*2);ctx.fillStyle="#000503";ctx.fill();
+  ctx.beginPath();ctx.arc(X,Y,cr,0,Math.PI*2);
+  ctx.strokeStyle=(hover===CORE)?"rgba(192,202,198,0.70)":"rgba(192,202,198,0.42)";ctx.stroke();
+  drawStrip(X,Y,cr,t);
+  ctx.font='600 9px "Martian Mono","JetBrains Mono",monospace';
+  ctx.fillStyle="rgba(192,202,198,0.62)";ctx.fillText("SINGULARITY",X,Y+cr+16);
+
+  /* Ring labels on a spine, knocked out of the ring line. The spine is not
+     vertical, so the pitch between labels is the RADIAL step projected onto
+     it — on a narrow viewport that closes to under a line height and all
+     five collapse into an unreadable stack. Where they do not fit, only the
+     two that carry words are drawn: the axis still reads inner-to-outer,
+     and nothing is printed on top of anything else. */
+  ctx.font='9px "JetBrains Mono",monospace';
+  var pitch=Math.abs(Math.sin(LABEL_ANG))*rad*(RINGS[1].r-RINGS[0].r),sparse=pitch<14;
+  RINGS.forEach(function(rg,i){
+    if(sparse&&i>0&&i<RINGS.length-1){return;}
+    var lx=X+Math.cos(LABEL_ANG)*rad*rg.r,ly=Y+Math.sin(LABEL_ANG)*rad*rg.r;
+    var w=ctx.measureText(rg.label).width;
+    ctx.fillStyle="#000503";ctx.fillRect(lx-w/2-5,ly-7,w+10,13);
+    ctx.fillStyle="rgba(192,202,198,0.58)";ctx.fillText(rg.label,lx,ly+3);
+  });
+
+  /* ── contacts ────────────────────────────────────────────────── */
+  CONTACTS.forEach(function(c){
+    var ang=angleOf(c),dist=rad*radiusOf(c,t);
+    c.sx=X+Math.cos(ang)*dist;c.sy=Y+Math.sin(ang)*dist;
+    var base=c.state==="commissioned"?0.58:(c.state==="provisioned"?0.28:0.10);
+    var a=Math.min(1,base+c.lit*0.45);
+    var sz=c.state==="commissioned"?5:(c.state==="provisioned"?3.4:2.4);
+
+    if(hover===c||selected===c){
+      ctx.beginPath();ctx.arc(c.sx,c.sy,16,0,Math.PI*2);
+      ctx.strokeStyle="rgba(78,232,212,0.75)";ctx.stroke();
+    }
+    if(c.state==="provisioned"){
+      ctx.beginPath();ctx.arc(c.sx,c.sy,sz,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,a);ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.arc(c.sx,c.sy,sz,0,Math.PI*2);
+      ctx.fillStyle=colorFor(c,a);ctx.fill();
+    }
+    /* the remembered sector is MARKED, never moved */
+    if(c.addr&&c.addr===rememberedHost){
+      ctx.strokeStyle=colorFor(c,0.7);
+      [-1,1].forEach(function(s){
+        ctx.beginPath();
+        ctx.moveTo(c.sx+s*13,c.sy-9);ctx.lineTo(c.sx+s*17,c.sy-9);
+        ctx.lineTo(c.sx+s*17,c.sy+9);ctx.lineTo(c.sx+s*13,c.sy+9);
+        ctx.stroke();
+      });
+      ctx.font='9px "JetBrains Mono",monospace';
+      ctx.fillStyle=colorFor(c,0.8);ctx.fillText("LAST LOCK",c.sx,c.sy+30);
+    }
+    /* label ABOVE for every sector, so marked and unmarked read identically
+       and the LAST LOCK brackets have the sides to themselves */
+    if(c.state==="commissioned"){
+      ctx.font='600 10px "Martian Mono","JetBrains Mono",monospace';
+      ctx.fillStyle=colorFor(c,0.92);ctx.fillText(c.desig,c.sx,c.sy-15);
+    }
+  });
+}
+
+/* Under reduced motion the city holds still — but PROJECT is an explicit
+   request to see where things will be, so frames run while it is engaged
+   and stop again on LIVE. */
+var rafOn=false;
+function loop(now){
+  draw(now);
+  if(!REDUCED||rate>1){requestAnimationFrame(loop);}else{rafOn=false;}
+}
+function startLoop(){if(!rafOn){rafOn=true;requestAnimationFrame(loop);}}
+function repaintIfStill(){if(REDUCED&&rate===1){requestAnimationFrame(draw);}}
+/* Held still, the map may have drawn its one frame in the fallback font. */
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(repaintIfStill);}
+
+/* A POINTER RESOLVES AGAINST THE MODEL, NOT AGAINST THE PAINT — nearest
+   centre wins, and NOTHING resolves beyond SNAP. The radius is not optional:
+   without it the nearest contact answers from anywhere on the stage, and the
+   readout states with total confidence that you are on something you are
+   nowhere near. */
+function resolveAt(px,py){
+  var dc=Math.hypot(px-cx(),py-cy());
+  if(dc<R()*CORE_R+9){return CORE;}
+  var best=null,bd=SNAP;
+  CONTACTS.forEach(function(c){
+    if(c.sx<-500){return;}
+    var d=Math.hypot(c.sx-px,c.sy-py);
+    if(d<bd){bd=d;best=c;}
+  });
+  return best;
+}
+cv.addEventListener("mousemove",function(e){
+  var r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
+  var best=resolveAt(mx,my);
+  if(best!==hover){hover=best;paintReadout();repaintIfStill();}
+  cv.style.cursor=(hover&&hover.state==="commissioned")?"pointer":"default";
+});
+cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=null;paintReadout();repaintIfStill();}});
+/* Resolved from the event rather than from `hover`, so a tap works: touch
+   never produces the mousemove that would have set it. */
+cv.addEventListener("click",function(e){
+  var r=cv.getBoundingClientRect();
+  var c=resolveAt(e.clientX-r.left,e.clientY-r.top);
+  if(c!==hover){hover=c;paintReadout();repaintIfStill();}
+  if(c&&c.state==="commissioned"){selected=c;beginThreshold(c.desig,c.addr,c.hue);}
+});
+new ResizeObserver(resize).observe(cv);resize();
+
+var readout=document.getElementById("readout");
+function paintReadout(){
+  var c=hover;
+  if(!c){
+    readout.innerHTML='<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>';
+    return;
+  }
+  /* Redaction is SELECTIVE and motivated: mass and radius are measurable from
+     outside a horizon, so they print plainly. The name is not. */
+  if(c.state==="core"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">SINGULARITY</span>'
+      +'<span class="ro-facts"><span>DESIGNATION <b>██&nbsp;███</b></span>'
+      +'<span>M <b>'+SING_MASS+'</b></span>'
+      +'<span>Rs <b>'+SING_RS_KM+'</b></span><span>&asymp; <b>'+SING_RS_AU+'</b></span>'
+      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+    return;
+  }
+  /* A bearing is an OBSERVATION, not a meaning, and a ring is a CLAIM. Both
+     say so rather than implying they encode or measure something. */
+  /* round BEFORE the final wrap, or 359.6° prints as 360° */
+  var brg=("00"+(Math.round(((angleOf(c)*180/Math.PI)%360+360)%360)%360)).slice(-3)+"&deg;";
+  var ring=c.ring===null?"<b>UNPLACED</b>":"<b>"+("0"+(c.ring+1)).slice(-2)+"</b> / 05 &middot; DECLARED";
+  var orb=c.ring===null?"":'<span>ORBIT <b>'+fmtPeriod(orbitPeriodMin(c.ring))+'</b></span>';
+  var bearing='<span>BRG <b>'+brg+'</b> &middot; OBSERVED</span>';
+  if(c.state==="unresolved"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
+      +'<span class="ro-facts"><span>UNRESOLVED RETURN</span><span>EMISSION <b>INTERMITTENT</b></span>'
+      +'<span>RING '+ring+'</span>'+bearing+'</span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+    return;
+  }
+  if(c.state==="provisioned"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">&mdash; &mdash; &mdash;</span>'
+      +'<span class="ro-facts"><span>PROVISIONED</span><span>NOT COMMISSIONED</span>'
+      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+bearing+'</span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button></div>';
+    return;
+  }
+  readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:'+(c.hue||"var(--silence)")+'">'+esc(c.desig)+'</span>'
+    +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b>'+esc(c.aperture)+'</b></span>'
+    +'<span>RING '+ring+'</span>'+orb+bearing+'<span><b>'+esc(c.addr)+'</b></span></span></div>'
+    +'<div class="ro-act"><button class="tune" id="tuneBtn" type="button">[ TUNE ]</button></div>';
+  var tb=document.getElementById("tuneBtn");
+  if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c.desig,c.addr,c.hue);});}
+}
+paintReadout();
+
+/* ── THE THRESHOLD, THE PROBE AND THE ROUTE ─────────────────────────────
+   A deliberate route gets a beat. The probe rides inside it and never
+   outside it — where there is no beat there is no probe, and the browser's
+   own error page is then the correct outcome.
+
+   WHAT FAILURE MAY SAY IS BOUNDED. "NO RESPONSE FROM R-83" is a statement
+   about this attempt. "R-83 DOES NOT EXIST" is a statement about the world
+   and is not ours to make: unreachable, asleep, mistyped and never-existed
+   are genuinely indistinguishable from here, and the ambiguity is TRUE.
+
+   A LIVE SEALED SECTOR IS NOT A FAILURE CASE — its front door serves an
+   entry terminal like any other, so the probe succeeds, the visitor is
+   routed, and the SECTOR decides whether to admit them. The scan routes to
+   the door; the door is the gate. */
+var BEAT_MS=1000,PROBE_MS=4000;
+var th=document.getElementById("threshold"),thFill=document.getElementById("thFill"),
+    thLab=document.getElementById("thLab"),thDesig=document.getElementById("thDesig"),
+    thAddr=document.getElementById("thAddr"),thTrack=document.getElementById("thTrack"),
+    thNote=document.getElementById("thNote"),thBack=document.getElementById("thBack");
+var thTimer=null,thFailed=false;
+
+function beginThreshold(label,host,hue){
+  thFailed=false;
+  thLab.className="th-lab";thLab.textContent="THRESHOLD";
+  thDesig.textContent=label;
+  /* NO HUE FOR A TYPED ADDRESS. Colouring one because the scan happens to
+     know it would confirm that it knows it — an oracle by decoration. */
+  thDesig.style.color=hue||"var(--silence)";
+  thAddr.textContent=host;
+  thTrack.hidden=false;thFill.style.width="0%";
+  thBack.hidden=true;
+  thNote.textContent="REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan";
+  th.hidden=false;
+
+  var start=performance.now(),verdict=null;
+  probe(host,function(v){verdict=v;});
+  clearInterval(thTimer);
+  thTimer=setInterval(function(){
+    var p=Math.min(1,(performance.now()-start)/BEAT_MS);
+    thFill.style.width=(p*100).toFixed(1)+"%";
+    if(p<1){return;}
+    if(verdict===null){return;}              /* beat done, still listening */
+    clearInterval(thTimer);
+    if(verdict==="fail"){failThreshold(label);return;}
+    /* "timeout" routes too: an inconclusive probe must not be more
+       obstructive than no probe at all. */
+    writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);
+    location.replace("https://"+host+"/");
+  },40);
+}
+function failThreshold(label){
+  thFailed=true;
+  thLab.className="th-lab fail";thLab.textContent="NO RESPONSE";
+  thDesig.textContent=label;thDesig.style.color="var(--silence)";
+  thTrack.hidden=true;
+  thNote.textContent="THE ADDRESS MAY BE UNREACHABLE, ASLEEP OR MISTYPED · FROM HERE THESE ARE THE SAME · NOTHING WAS REMEMBERED";
+  thBack.hidden=false;thBack.focus();
+}
+function closeThreshold(){
+  clearInterval(thTimer);th.hidden=true;selected=null;thFailed=false;repaintIfStill();
+}
+thBack.addEventListener("click",closeThreshold);
+/* ESC dismisses a FAILURE, not the beat — the beat is not a timer to catch. */
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"&&!th.hidden&&thFailed){closeThreshold();}
+});
+
+/* Opaque by design: `no-cors` resolves when the origin answers and rejects
+   when it cannot be reached. Crude, but "could not reach it" is the only
+   category needed, and the reply's contents are none of the scan's business.
+   The disclosure here is DNS's and always was — a .voidline.gg sector is a
+   public record, and this reveals exactly what `dig` already does. */
+function probe(host,cb){
+  var done=false;
+  function settle(v){if(!done){done=true;cb(v);}}
+  var to=setTimeout(function(){settle("timeout");},PROBE_MS);
+  try{
+    fetch("https://"+host+"/",{mode:"no-cors",cache:"no-store"})
+      .then(function(){clearTimeout(to);settle("ok");})
+      .catch(function(){clearTimeout(to);settle("fail");});
+  }catch(e){clearTimeout(to);settle("timeout");}
+}
+
+/* ── THE CORRIDOR ADDRESS ───────────────────────────────────────────────
+   IT RESOLVES; IT NEVER SEARCHES. This function is pure string work and
+   touches CONTACTS, DECLARED and the data file NOWHERE — a field that
+   confirmed or denied would be an enumeration oracle, and you could learn
+   which sealed sectors exist by typing guesses. Typing navigates; the sector
+   answers, or nothing does, and the page stays silent either way.
+
+   TWO ACCEPTED SHAPES. A bare designation resolves to a sector host on the
+   Voidline domain; anything with a dot is taken as typed, because a
+   sovereign sector may live anywhere.
+
+   Shape is all that is validated, and it is validated to keep the string
+   from steering the navigation somewhere it was not pointed — no scheme, no
+   path, no credentials, no port. */
+var SECTOR_DOMAIN="voidline.gg";
+var HOSTNAME_RE=/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+function resolveCorridor(raw){
+  var s=String(raw||"").trim().toLowerCase();
+  if(!s||s.length>253){return null;}
+  if(/[\s\/@:?#\\]/.test(s)){return null;}
+  if(s.indexOf(".")<0){
+    var d=s.replace(/[^a-z0-9]/g,"");          /* R-77 → r77 */
+    if(!d||d.length>63){return null;}
+    return {host:d+"."+SECTOR_DOMAIN,label:s.toUpperCase()};
+  }
+  if(!HOSTNAME_RE.test(s)){return null;}
+  return {host:s,label:s};
+}
+var corIn=document.getElementById("corridorInput"),corGo=document.getElementById("corridorGo");
+function submitCorridor(){
+  var r=resolveCorridor(corIn.value);
+  /* Malformed input is not an answer about a sector, so it gets no words —
+     only the field declining to leave. */
+  if(!r){corIn.focus();corIn.select();return;}
+  selected=null;
+  beginThreshold(r.label,r.host,null);
+}
+corGo.addEventListener("click",submitCorridor);
+corIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submitCorridor();}});
+
+/* ── the remembered sector ──────────────────────────────────────────────
+   Stored on THIS origin, so it is per-device and outside any sector's
+   reach — a sector cannot clear your network-level choice. Reaching the
+   scan at all means the forward did not fire, so if something is remembered
+   the visitor arrived deliberately and is owed a way to undo it: `?scan`
+   without a way to forget leaves you forwarded on every plain visit. */
+var rememberedHost=readStore(STORE_HOST),forgetBtn=document.getElementById("forgetBtn");
+if(rememberedHost){
+  forgetBtn.textContent="[ FORGET "+(readStore(STORE_LABEL)||rememberedHost)+" ]";
+  forgetBtn.hidden=false;
+}
+forgetBtn.addEventListener("click",function(){
+  dropStore(STORE_HOST);dropStore(STORE_LABEL);
+  rememberedHost=null;forgetBtn.hidden=true;repaintIfStill();
+});
+
+/* ── PROJECTION, NOT SPEED ──────────────────────────────────────────────
+   The city is not spinning faster — the instrument is showing where things
+   WILL be, which is an honest thing for an orbital plot to do and the only
+   way to perceive that the rings have different periods at all. It stays
+   honest by SAYING SO: while it runs the clock reads the projected time and
+   its offset, so it cannot be left running and mistaken for now. LIVE snaps
+   back to absolute time. */
+var statusWord=document.getElementById("statusWord");
+document.querySelectorAll("[data-rate]").forEach(function(b){
+  b.addEventListener("click",function(){
+    rate=Number(b.dataset.rate);
+    if(rate===1){vClock=Date.now();}
+    document.querySelectorAll("[data-rate]").forEach(function(o){o.setAttribute("aria-pressed",String(o===b));});
+    statusWord.textContent=rate>1?"PROJECTING":"LISTENING";
+    tick();startLoop();repaintIfStill();
+  });
+});
+function tick(){
+  var el=document.getElementById("clock");
+  if(rate>1){
+    var off=Math.max(0,vClock-Date.now()),d=Math.floor(off/86400000),h=Math.floor(off/3600000)%24;
+    el.textContent=new Date(vClock).toTimeString().slice(0,8)+"  +"+d+"d "+("0"+h).slice(-2)+"h";
+    el.style.color="var(--cyan-dim)";
+  }else{
+    el.textContent=new Date().toTimeString().slice(0,8);
+    el.style.color="";
+  }
+}
+tick();setInterval(tick,1000);
+startLoop();
+})();
+</script>
+</body>
+</html>

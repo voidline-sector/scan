@@ -21,6 +21,11 @@ most of what it does in practice.
 Sectors that have not announced themselves are not shown. There is no directory
 here and no list to enumerate: a sealed sector emits nothing, so there is
 nothing to hide. If you were handed an address to one, there is a field for it.
+The field resolves an address; it does not search for one, and it will not tell
+you whether a sector exists.
+
+Load `uplink.voidline.gg/?scan` to reach the scan itself without being
+forwarded — and to forget the sector this device remembers.
 
 ## Running it locally
 
