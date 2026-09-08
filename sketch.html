@@ -1,0 +1,560 @@
+<title>Voidline Sector Scope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Martian+Mono:wght@400;600;800&display=swap">
+<style>
+:root{
+  --ground:#000503;
+  --cyan:#4ee8d4;
+  --cyan-dim:rgba(78,232,212,0.55);
+  --cyan-lo:rgba(78,232,212,0.18);
+  --cyan-frame:rgba(78,232,212,0.42);
+  --silence:#c0cac6;
+  --silence-lo:rgba(192,202,198,0.55);
+  /* TEXT and HAIRLINES are different jobs and must not share a token. A
+     border can live at 0.20 and read fine; type at 0.20 is unreadable. */
+  --txt:#c0cac6;
+  --txt-2:rgba(192,202,198,0.76);
+  --txt-3:rgba(192,202,198,0.56);
+  --silence-hair:rgba(192,202,198,0.22);
+  --red:#ff3030;
+  --r77:#ff9a3c;
+  --mono:"JetBrains Mono","Courier New",monospace;
+  --stencil:"Martian Mono","JetBrains Mono",monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+.frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
+
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
+.mark{font-family:var(--stencil);font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--cyan);white-space:nowrap}
+.mark .sep{color:var(--txt-3);margin:0 .5em}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.meta{font-size:10px;letter-spacing:.14em;color:var(--txt-2);font-variant-numeric:tabular-nums}
+.live{font-size:10px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
+.live i{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bp 2.4s ease-in-out infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.25}}
+.brk{font-family:var(--mono);font-size:10px;letter-spacing:.13em;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);padding:5px 9px;cursor:pointer;transition:color .16s,border-color .16s}
+.brk:hover,.brk:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
+
+.stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+#viz{display:block;width:100%;height:100%}
+.corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
+.c-tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.c-tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.c-bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.c-br{bottom:12px;right:12px;border-left:0;border-top:0}
+.stage-tag{position:absolute;top:14px;left:38px;font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);pointer-events:none;text-transform:uppercase}
+.zoomtag{position:absolute;top:14px;right:38px;font-size:9.5px;letter-spacing:.18em;color:var(--txt-3);pointer-events:none;font-variant-numeric:tabular-nums}
+
+.key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
+.key-sw{width:26px;display:flex;align-items:center;gap:3px;flex:0 0 auto}
+.pip{width:5px;height:5px;border-radius:50%}
+.p1{background:#ff9a3c}.p2{background:#8fd0ff}.p3{background:#7de8a8}
+.key-hollow{width:7px;height:7px;border-radius:50%;border:1px solid rgba(192,202,198,0.5)}
+.key-faint{width:5px;height:5px;border-radius:50%;background:rgba(192,202,198,0.20)}
+
+/* FIXED height — the readout must never resize the stage. A growing readout
+   shrinks the canvas, which re-lays the whole map out from under the pointer
+   that caused it. */
+.readout{flex:0 0 auto;border-top:1px solid var(--cyan-lo);padding:13px 18px;height:96px;display:flex;align-items:center;gap:20px;background:var(--ground);overflow:hidden}
+.ro-idle{font-size:10.5px;letter-spacing:.17em;color:var(--txt-2)}
+.ro-body{display:flex;align-items:baseline;gap:18px;flex:1 1 auto;min-width:0}
+.ro-desig{font-family:var(--stencil);font-weight:800;font-size:26px;letter-spacing:.04em;line-height:1;white-space:nowrap;flex:0 0 auto}
+.ro-facts{display:flex;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;font-size:10.5px;letter-spacing:.13em;color:var(--txt-2);font-variant-numeric:tabular-nums}
+.ro-facts::-webkit-scrollbar{display:none}
+.ro-facts span{white-space:nowrap}
+.ro-facts b{font-weight:500;color:var(--silence)}
+.ro-act{margin-left:auto;flex:0 0 auto}
+.tune{font-family:var(--mono);font-size:11px;letter-spacing:.18em;padding:10px 20px;background:none;border:1px solid var(--cyan-frame);color:var(--cyan);cursor:pointer;transition:background .16s}
+.tune:hover,.tune:focus-visible{background:var(--cyan-lo);outline:none}
+.tune[disabled]{border-color:var(--silence-hair);color:var(--txt-3);cursor:default}
+
+.threshold{position:absolute;inset:0;background:rgba(0,5,3,0.9);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;text-align:center}
+.th-lab{font-size:10px;letter-spacing:.34em;color:var(--cyan-dim)}
+.th-desig{font-family:var(--stencil);font-weight:800;font-size:clamp(28px,6vw,52px);letter-spacing:.03em;color:var(--r77);text-shadow:0 0 26px rgba(255,154,60,.45)}
+.th-addr{font-size:11px;letter-spacing:.2em;color:var(--txt-2)}
+.th-track{width:min(340px,72vw);height:2px;background:var(--silence-hair);overflow:hidden}
+.th-fill{height:100%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);width:0%}
+.th-hold{font-family:var(--mono);font-size:11px;letter-spacing:.2em;padding:11px 26px;background:none;border:1px solid var(--red);color:var(--red);cursor:pointer;transition:background .16s}
+.th-hold:hover,.th-hold:focus-visible{background:rgba(255,48,48,.12);outline:none}
+.th-hold[disabled]{border-color:var(--silence-hair);color:var(--txt-3);cursor:default}
+.th-note{font-size:9.5px;letter-spacing:.16em;color:var(--txt-3);max-width:46ch;line-height:1.7}
+
+.sketch{flex:0 0 auto;border-top:1px dashed var(--silence-hair);padding:9px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#000}
+.sk-tag{font-size:9px;letter-spacing:.2em;color:var(--txt-3);margin-right:4px}
+.seg{display:flex;border:1px solid var(--silence-hair)}
+.seg button{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:6px 13px;background:none;border:0;color:var(--txt-2);cursor:pointer;transition:color .16s,background .16s}
+.seg button+button{border-left:1px solid var(--silence-hair)}
+.seg button[aria-pressed="true"]{background:var(--cyan-lo);color:var(--cyan)}
+.seg button:focus-visible{outline:1px solid var(--cyan-frame);outline-offset:-1px}
+.sk-note{font-size:9px;letter-spacing:.1em;color:var(--txt-3);margin-left:auto}
+@media (max-width:820px){.sk-note{display:none}}
+@media (max-width:700px){
+  .ro-desig{font-size:20px}
+  .readout{flex-wrap:wrap;gap:10px;height:140px}
+  .ro-act{margin-left:0;width:100%}
+  .tune{width:100%}
+  .key{display:none}
+  .zoomtag{display:none}
+}
+</style>
+
+<div class="frame">
+  <header class="bar">
+    <div class="mark">VOIDLINE<span class="sep">//</span>SECTOR SCAN</div>
+    <div class="bar-right">
+      <button class="brk" id="codexBtn" type="button">[ CODEX &middot; PUBLIC EDITION ]</button>
+      <span class="meta" id="clock">--:--:--</span>
+      <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <canvas id="viz"></canvas>
+    <span class="corner c-tl"></span><span class="corner c-tr"></span>
+    <span class="corner c-bl"></span><span class="corner c-br"></span>
+    <div class="stage-tag" id="stageTag">passive &middot; sectors announce themselves</div>
+    <div class="zoomtag" id="zoomTag">1.00&times;</div>
+
+    <div class="key">
+      <div class="key-row">
+        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
+        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; SELECTABLE
+      </div>
+      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
+      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
+    </div>
+
+    <div class="threshold" id="threshold" hidden>
+      <div class="th-lab">THRESHOLD</div>
+      <div class="th-desig" id="thDesig">R-77</div>
+      <div class="th-addr" id="thAddr">r77.voidline.gg</div>
+      <div class="th-track"><div class="th-fill" id="thFill"></div></div>
+      <button class="th-hold" id="thHold" type="button">[ HOLD ]</button>
+      <div class="th-note" id="thNote">HOLD OR PRESS ESC TO REMAIN AT THE SCAN</div>
+    </div>
+  </main>
+
+  <div class="readout" id="readout"></div>
+
+  <footer class="sketch">
+    <span class="sk-tag">SKETCH</span>
+    <div class="seg" role="group" aria-label="Detection model">
+      <button type="button" data-model="emit" aria-pressed="true">SECTOR EMIT</button>
+      <button type="button" data-model="sweep" aria-pressed="false">ROTATING SWEEP</button>
+    </div>
+    <div class="seg" role="group" aria-label="Orbit projection">
+      <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
+      <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
+    </div>
+    <div class="seg" role="group" aria-label="Remembered sector">
+      <button type="button" id="rememberBtn" aria-pressed="true">REMEMBERED</button>
+    </div>
+    <div class="seg"><button type="button" id="resetBtn">RESET VIEW</button></div>
+    <span class="sk-note">scroll to zoom &middot; drag to pan &middot; scaffolding, not the page</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var REDUCED=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+var CORE_R=0.085;
+var RINGS=[{r:0.235,label:"01 · INNER"},{r:0.395,label:"02"},{r:0.555,label:"03"},
+           {r:0.715,label:"04"},{r:0.875,label:"05 · OUTER RIM"}];
+var LABEL_ANG=200*Math.PI/180;
+
+/* Emission cadence IS the aperture state — an OPEN sector announces itself
+   often, a DRIFTING one rarely. A sector that has gone DARK stops emitting
+   and is simply not here, which is §04 falling out of the mechanism. */
+var CADENCE={OPEN:3.2,FOCUSED:5.6,DRIFTING:9.5};
+
+var CONTACTS=[
+  {id:"R-77",kind:"commissioned",desig:"R-77",addr:"r77.voidline.gg",aperture:"OPEN",hue:"#ff9a3c",ring:3},
+  {id:"prov-a",kind:"provisioned",ring:1},
+  {id:"prov-b",kind:"provisioned",ring:3}
+];
+for(var u=0;u<8;u++){CONTACTS.push({id:"ret-"+u,kind:"unresolved",ring:null});}
+CONTACTS.forEach(function(c){
+  c.bearing=(hash(c.id)%3600)/10;
+  c.phase=(hash(c.id+":p")%1000)/1000;
+  c.drift=c.ring===null?(0.30+((hash(c.id+":d")%1000)/1000)*0.62):0;
+  c.period=c.kind==="commissioned"?CADENCE[c.aperture]
+          :(c.kind==="provisioned"?14:6+((hash(c.id+":c")%1000)/1000)*9);
+  c.lit=0;c.sx=-9999;c.sy=-9999;
+});
+
+/* Orbits run on ABSOLUTE time (Date.now/Date.UTC are both UTC-based, so a
+   viewer's timezone cannot shift the city) — every viewer sees the same
+   arrangement at the same moment. Periods are KEPLERIAN, T ∝ r^1.5: sectors
+   are sovereign independent deployments, not sections of one engineered
+   wheel, so the rings shear past each other over days. */
+var EPOCH=Date.UTC(2026,0,1);
+var ORBIT_BASE_MIN=40;
+function orbitPeriodMin(ring){return ORBIT_BASE_MIN*Math.pow(RINGS[ring].r/RINGS[0].r,1.5);}
+function fmtPeriod(m){
+  var h=Math.floor(m/60),mm=Math.round(m%60);
+  return h?(h+"h "+("0"+mm).slice(-2)+"m"):(Math.round(m)+"m");
+}
+
+/* The singularity's measurables. Not M87* — a smaller SMBH whose numbers are
+   internally sound: Rs = 2.95 km × (M/M☉), so 1.0×10⁹ km ⇒ ~3.4×10⁸ M☉, and
+   the horizon sits at 6.7 AU — between Jupiter and Saturn. */
+var SING_RS_KM="1.0 × 10⁹ KM";
+var SING_RS_AU="6.7 AU";
+var SING_MASS="3.4 × 10⁸ M☉";
+
+var REMEMBERED="R-77";
+var SNAP=40,model="emit",hover=null,selected=null,t0=performance.now(),mx=-9999,my=-9999;
+var scale=1,ox=0,oy=0,dragging=false,dragged=false,lastX=0,lastY=0;
+var rate=1,vClock=Date.now(),lastFrame=performance.now();
+var CORE={kind:"core"};
+
+var cv=document.getElementById("viz"),ctx=cv.getContext("2d"),W=0,H=0,BASE=1;
+function resize(){
+  var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,r.width);H=Math.max(1,r.height);
+  cv.width=Math.round(W*d);cv.height=Math.round(H*d);
+  ctx.setTransform(d,0,0,d,0,0);
+  BASE=Math.min(W,H)*0.42;clampPan();
+}
+new ResizeObserver(resize).observe(cv);resize();
+
+function cx(){return W/2+ox;}
+function cy(){return H/2+oy;}
+function R(){return BASE*scale;}
+function clampPan(){var lim=BASE*(scale-1)+8;ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));}
+function angleOf(c){
+  if(c.ring===null){return c.bearing*Math.PI/180;}
+  var turns=((vClock-EPOCH)/60000)/orbitPeriodMin(c.ring);
+  return (c.bearing+turns*360)*Math.PI/180;
+}
+function radiusOf(c,t){
+  if(c.ring!==null){return RINGS[c.ring].r;}
+  return c.drift+Math.sin(t*0.22+c.phase*6.28)*0.035;
+}
+function pulseAt(c,t){var p=((t/c.period)+c.phase)%1;return p;}
+function colorFor(c,a){
+  if(c.kind==="commissioned"){return "rgba(255,154,60,"+a+")";}
+  return "rgba(192,202,198,"+a+")";
+}
+
+/* THE STRIP — the classification bar's visual grammar, not its meaning.
+   TWO REJECTED ATTEMPTS, both worth keeping so neither is re-tried:
+   (1) PROXIMITY, cells measuring inward with the last three unfillable. It
+       failed on GEOMETRY — a horizontal strip above a disc cannot express
+       RADIAL distance, since left and right are equally far from the centre
+       beneath it, so there was no "inward" for the axis to mean and the dead
+       cells read as broken pixels rather than as the limit of measurement.
+   (2) A DISCRETE time series, newest sample shifting in from the right. It
+       read as low-fi: everything else on this page moves smoothly, so a
+       stepping element was the loudest thing in the frame, and the vocabulary
+       ("gravimetric") named something nobody recognises.
+   What survives is the SMOOTH per-cell fade, at HALF the original rate, with
+   each cell also carrying a much slower second oscillator. When that one
+   peaks the cell warms toward red — rare, gradual, never a step. Nothing here
+   claims to be a measurement of anything nameable; it is an instrument at
+   rest, which is what §03 means by a surface that is read, not explained. */
+var GV_CELLS=9,GV_W=6,GV_H=9,GV_GAP=3;
+function drawStrip(X,Y,cr,t){
+  var total=GV_CELLS*GV_W+(GV_CELLS-1)*GV_GAP;
+  var x0=X-total/2,y0=Y-cr-GV_H-14;
+  for(var i=0;i<GV_CELLS;i++){
+    var lum=0.5+0.5*Math.sin(t*(0.80+i*0.145)+i*2.1);
+    var heat=0.5+0.5*Math.sin(t*(0.17+i*0.031)+i*4.7);
+    var red=Math.pow(Math.max(0,(heat-0.93)/0.07),3);
+    var cR=Math.round(78+177*red),cG=Math.round(232-184*red),cB=Math.round(212-164*red);
+    var a=Math.min(1,0.14+lum*0.56+red*0.18);
+    ctx.fillStyle="rgba("+cR+","+cG+","+cB+","+a.toFixed(3)+")";
+    ctx.fillRect(x0+i*(GV_W+GV_GAP),y0,GV_W,GV_H);
+  }
+}
+
+function draw(now){
+  var t=(now-t0)/1000,dt=Math.min(0.1,(now-lastFrame)/1000);lastFrame=now;
+  vClock+=dt*1000*rate;
+  var X=cx(),Y=cy(),rad=R(),cr=rad*CORE_R;
+  ctx.clearRect(0,0,W,H);
+  ctx.lineWidth=1;ctx.textAlign="center";
+
+  ctx.strokeStyle="rgba(78,232,212,0.07)";
+  for(var b=0;b<24;b++){
+    var a0=b*Math.PI/12;
+    ctx.beginPath();
+    ctx.moveTo(X+Math.cos(a0)*cr,Y+Math.sin(a0)*cr);
+    ctx.lineTo(X+Math.cos(a0)*rad*0.96,Y+Math.sin(a0)*rad*0.96);
+    ctx.stroke();
+  }
+  RINGS.forEach(function(rg,i){
+    ctx.beginPath();ctx.arc(X,Y,rad*rg.r,0,Math.PI*2);
+    ctx.strokeStyle=i===RINGS.length-1?"rgba(78,232,212,0.15)":"rgba(78,232,212,0.20)";
+    ctx.stroke();
+  });
+
+  /* ── detection model ─────────────────────────────────────────── */
+  if(model==="sweep"&&!REDUCED){
+    var sweep=(t*0.5)%(Math.PI*2);
+    for(var i2=0;i2<28;i2++){
+      var a2=sweep-i2*0.023;
+      ctx.beginPath();
+      ctx.moveTo(X+Math.cos(a2)*cr,Y+Math.sin(a2)*cr);
+      ctx.lineTo(X+Math.cos(a2)*rad*0.96,Y+Math.sin(a2)*rad*0.96);
+      ctx.strokeStyle="rgba(78,232,212,"+((1-i2/28)*0.15)+")";
+      ctx.lineWidth=2;ctx.stroke();
+    }
+    ctx.lineWidth=1;
+    CONTACTS.forEach(function(c){
+      var ang=angleOf(c);
+      var d=Math.abs(((ang-sweep+Math.PI*3)%(Math.PI*2))-Math.PI);
+      if(d>Math.PI-0.09){c.lit=1;}
+      c.lit=Math.max(c.lit-0.0055,0);
+    });
+  } else if(model==="emit"&&!REDUCED){
+    CONTACTS.forEach(function(c){
+      var ang=angleOf(c),dist=rad*radiusOf(c,t);
+      var px=X+Math.cos(ang)*dist,py=Y+Math.sin(ang)*dist;
+      var p=pulseAt(c,t);
+      c.lit=Math.max(0,1-p*5);
+      var reach=c.kind==="commissioned"?rad*0.30:(c.kind==="provisioned"?rad*0.13:rad*0.09);
+      var strength=c.kind==="commissioned"?0.30:(c.kind==="provisioned"?0.13:0.09);
+      ctx.beginPath();ctx.arc(px,py,4+p*reach,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,(1-p)*strength);ctx.stroke();
+    });
+  } else {
+    CONTACTS.forEach(function(c){c.lit=0.5;});
+  }
+
+  /* ── the singularity: an absence. Drawn AFTER emissions so nothing
+        passes through it, and it never emits anything of its own. ── */
+  var lens=ctx.createRadialGradient(X,Y,cr,X,Y,cr*2.1);
+  lens.addColorStop(0,"rgba(78,232,212,0.07)");lens.addColorStop(1,"rgba(78,232,212,0)");
+  ctx.beginPath();ctx.arc(X,Y,cr*2.1,0,Math.PI*2);ctx.fillStyle=lens;ctx.fill();
+  ctx.beginPath();ctx.arc(X,Y,cr,0,Math.PI*2);ctx.fillStyle="#000503";ctx.fill();
+  ctx.beginPath();ctx.arc(X,Y,cr,0,Math.PI*2);
+  ctx.strokeStyle=(hover===CORE)?"rgba(192,202,198,0.70)":"rgba(192,202,198,0.42)";ctx.stroke();
+  drawStrip(X,Y,cr,t);
+  ctx.font='600 9px "Martian Mono","JetBrains Mono",monospace';
+  ctx.fillStyle="rgba(192,202,198,0.62)";ctx.fillText("SINGULARITY",X,Y+cr+16);
+
+  /* ring labels on a spine, knocked out of the ring line */
+  ctx.font='9px "JetBrains Mono",monospace';
+  RINGS.forEach(function(rg){
+    var lx=X+Math.cos(LABEL_ANG)*rad*rg.r,ly=Y+Math.sin(LABEL_ANG)*rad*rg.r;
+    var w=ctx.measureText(rg.label).width;
+    ctx.fillStyle="#000503";ctx.fillRect(lx-w/2-5,ly-7,w+10,13);
+    ctx.fillStyle="rgba(192,202,198,0.58)";ctx.fillText(rg.label,lx,ly+3);
+  });
+
+  /* ── contacts ────────────────────────────────────────────────── */
+  CONTACTS.forEach(function(c){
+    var ang=angleOf(c),dist=rad*radiusOf(c,t);
+    c.sx=X+Math.cos(ang)*dist;c.sy=Y+Math.sin(ang)*dist;
+    var base=c.kind==="commissioned"?0.58:(c.kind==="provisioned"?0.28:0.10);
+    var a=Math.min(1,base+c.lit*0.45);
+    var sz=c.kind==="commissioned"?5:(c.kind==="provisioned"?3.4:2.4);
+
+    if(hover===c||selected===c){
+      ctx.beginPath();ctx.arc(c.sx,c.sy,16,0,Math.PI*2);
+      ctx.strokeStyle="rgba(78,232,212,0.75)";ctx.stroke();
+    }
+    if(c.kind==="provisioned"){
+      ctx.beginPath();ctx.arc(c.sx,c.sy,sz,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,a);ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.arc(c.sx,c.sy,sz,0,Math.PI*2);
+      ctx.fillStyle=colorFor(c,a);ctx.fill();
+    }
+    /* the remembered sector is MARKED, never moved */
+    if(c.id===REMEMBERED&&remembered){
+      ctx.strokeStyle=colorFor(c,0.7);
+      [-1,1].forEach(function(s){
+        ctx.beginPath();
+        ctx.moveTo(c.sx+s*13,c.sy-9);ctx.lineTo(c.sx+s*17,c.sy-9);
+        ctx.lineTo(c.sx+s*17,c.sy+9);ctx.lineTo(c.sx+s*13,c.sy+9);
+        ctx.stroke();
+      });
+      ctx.font='9px "JetBrains Mono",monospace';
+      ctx.fillStyle=colorFor(c,0.8);ctx.fillText("LAST LOCK",c.sx,c.sy+30);
+    }
+    /* label ABOVE for every sector, so marked and unmarked read identically */
+    if(c.kind==="commissioned"){
+      ctx.font='600 10px "Martian Mono","JetBrains Mono",monospace';
+      ctx.fillStyle=colorFor(c,0.92);ctx.fillText(c.desig,c.sx,c.sy-15);
+    }
+  });
+}
+function loop(now){draw(now);requestAnimationFrame(loop);}
+if(REDUCED){requestAnimationFrame(draw);}else{requestAnimationFrame(loop);}
+function repaintIfStill(){if(REDUCED){requestAnimationFrame(draw);}}
+
+function resolveAt(px,py){
+  var dc=Math.hypot(px-cx(),py-cy());
+  if(dc<R()*CORE_R+9){return CORE;}
+  var best=null,bd=SNAP;
+  CONTACTS.forEach(function(c){
+    if(c.sx<-500){return;}
+    var d=Math.hypot(c.sx-px,c.sy-py);
+    if(d<bd){bd=d;best=c;}
+  });
+  return best;
+}
+cv.addEventListener("mousemove",function(e){
+  var r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
+  if(dragging){
+    ox+=e.clientX-lastX;oy+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;
+    dragged=true;clampPan();repaintIfStill();return;
+  }
+  var best=resolveAt(mx,my);
+  if(best!==hover){hover=best;paintReadout();repaintIfStill();}
+  cv.style.cursor=(hover&&hover.kind==="commissioned")?"pointer":(scale>1?"grab":"default");
+});
+cv.addEventListener("mousedown",function(e){
+  if(scale<=1){return;}
+  dragging=true;dragged=false;lastX=e.clientX;lastY=e.clientY;cv.style.cursor="grabbing";
+});
+window.addEventListener("mouseup",function(){dragging=false;cv.style.cursor="default";});
+cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=null;paintReadout();repaintIfStill();}});
+cv.addEventListener("click",function(){
+  if(dragged){dragged=false;return;}
+  if(hover&&hover.kind==="commissioned"){selected=hover;beginThreshold(hover);}
+});
+cv.addEventListener("wheel",function(e){
+  e.preventDefault();
+  var r=cv.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;
+  var k=e.deltaY<0?1.14:1/1.14,ns=Math.max(1,Math.min(3,scale*k));
+  if(ns===scale){return;}
+  ox=px-W/2-(px-cx())*(ns/scale);oy=py-H/2-(py-cy())*(ns/scale);
+  scale=ns;clampPan();
+  document.getElementById("zoomTag").textContent=scale.toFixed(2)+"×";
+  repaintIfStill();
+},{passive:false});
+cv.addEventListener("dblclick",resetView);
+function resetView(){scale=1;ox=0;oy=0;document.getElementById("zoomTag").textContent="1.00×";repaintIfStill();}
+document.getElementById("resetBtn").addEventListener("click",resetView);
+
+var readout=document.getElementById("readout");
+function paintReadout(){
+  var c=hover;
+  if(!c){
+    readout.innerHTML='<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>';
+    return;
+  }
+  /* Redaction is SELECTIVE and motivated: mass and radius are measurable from
+     outside a horizon, so they print plainly. The name is not. */
+  if(c.kind==="core"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">SINGULARITY</span>'
+      +'<span class="ro-facts"><span>DESIGNATION <b>██&nbsp;███</b></span>'
+      +'<span>M <b>'+SING_MASS+'</b></span>'
+      +'<span>Rs <b>'+SING_RS_KM+'</b></span><span>&asymp; <b>'+SING_RS_AU+'</b></span>'
+      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+    return;
+  }
+  var brg=("00"+Math.round(((angleOf(c)*180/Math.PI)%360+360)%360)).slice(-3)+"&deg;";
+  var ring=c.ring===null?"<b>UNPLACED</b>":"<b>"+("0"+(c.ring+1)).slice(-2)+"</b> / 05";
+  var orb=c.ring===null?"":'<span>ORBIT <b>'+fmtPeriod(orbitPeriodMin(c.ring))+'</b></span>';
+  if(c.kind==="unresolved"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
+      +'<span class="ro-facts"><span>UNRESOLVED RETURN</span><span>EMISSION <b>INTERMITTENT</b></span>'
+      +'<span>RING '+ring+'</span><span>BRG <b>'+brg+'</b></span></span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+    return;
+  }
+  if(c.kind==="provisioned"){
+    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">&mdash; &mdash; &mdash;</span>'
+      +'<span class="ro-facts"><span>PROVISIONED</span><span>NOT COMMISSIONED</span>'
+      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+'<span>BRG <b>'+brg+'</b></span></span></div>'
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button></div>';
+    return;
+  }
+  readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:'+c.hue+'">'+c.desig+'</span>'
+    +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b>'+c.aperture+'</b></span>'
+    +'<span>RING '+ring+'</span>'+orb+'<span>BRG <b>'+brg+'</b></span><span><b>'+c.addr+'</b></span></span></div>'
+    +'<div class="ro-act"><button class="tune" id="tuneBtn" type="button">[ TUNE ]</button></div>';
+  var tb=document.getElementById("tuneBtn");
+  if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c);});}
+}
+paintReadout();
+
+var th=document.getElementById("threshold"),thFill=document.getElementById("thFill"),
+    thDesig=document.getElementById("thDesig"),thAddr=document.getElementById("thAddr"),
+    thHold=document.getElementById("thHold"),thNote=document.getElementById("thNote");
+var thTimer=null,thStart=0,HOLD_MS=3000;
+function beginThreshold(c){
+  thDesig.textContent=c.desig;thDesig.style.color=c.hue;
+  thAddr.textContent=c.addr;thFill.style.width="0%";
+  thHold.textContent="[ HOLD ]";thHold.disabled=false;
+  thNote.textContent="HOLD OR PRESS ESC TO REMAIN AT THE SCAN";
+  th.hidden=false;thStart=performance.now();
+  clearInterval(thTimer);
+  thTimer=setInterval(function(){
+    var p=Math.min(1,(performance.now()-thStart)/HOLD_MS);
+    thFill.style.width=(p*100).toFixed(1)+"%";
+    if(p>=1){
+      clearInterval(thTimer);
+      thHold.textContent="[ ROUTED ]";thHold.disabled=true;
+      thNote.textContent="IN THE REAL PAGE THIS IS A NAVIGATION — THE SKETCH STOPS HERE";
+    }
+  },40);
+}
+function stopThreshold(){clearInterval(thTimer);th.hidden=true;selected=null;}
+thHold.addEventListener("click",stopThreshold);
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!th.hidden){stopThreshold();}});
+
+/* ── sketch scaffolding ────────────────────────────────────────── */
+var tag=document.getElementById("stageTag"),statusWord=document.getElementById("statusWord");
+document.querySelectorAll("[data-model]").forEach(function(b){
+  b.addEventListener("click",function(){
+    model=b.dataset.model;
+    document.querySelectorAll("[data-model]").forEach(function(o){o.setAttribute("aria-pressed",String(o===b));});
+    /* the copy follows the claim — a sweep scans, an array listens */
+    tag.textContent=model==="emit"?"passive · sectors announce themselves"
+                                  :"active sweep · rotating from the singularity";
+    refreshStatus();
+    repaintIfStill();
+  });
+});
+/* PROJECTION, not speed. The city is not spinning faster — the instrument is
+   showing where things WILL be, which is an honest thing for an orbital plot
+   to do and the only way to perceive that the rings have different periods.
+   It stays honest by SAYING SO: while it runs, the header clock reads the
+   projected time rather than now, so it cannot be left running and mistaken
+   for the truth. Returning to LIVE snaps back to absolute time. */
+function refreshStatus(){
+  statusWord.textContent=rate>1?"PROJECTING":(model==="emit"?"LISTENING":"SCANNING");
+}
+document.querySelectorAll("[data-rate]").forEach(function(b){
+  b.addEventListener("click",function(){
+    rate=Number(b.dataset.rate);
+    if(rate===1){vClock=Date.now();}
+    document.querySelectorAll("[data-rate]").forEach(function(o){o.setAttribute("aria-pressed",String(o===b));});
+    refreshStatus();tick();
+  });
+});
+var remembered=true,rb=document.getElementById("rememberBtn");
+rb.addEventListener("click",function(){
+  remembered=!remembered;rb.setAttribute("aria-pressed",String(remembered));
+  if(remembered){beginThreshold(CONTACTS[0]);}else{stopThreshold();}
+  repaintIfStill();
+});
+document.getElementById("codexBtn").addEventListener("click",function(){
+  window.alert("Own route — not built in this sketch.\n\nThe public edition of the codex lives at its own address, reached by this one control. Zero weight on the routing path.");
+});
+function tick(){
+  var el=document.getElementById("clock");
+  if(rate>1){
+    var off=Math.max(0,vClock-Date.now()),d=Math.floor(off/86400000),h=Math.floor(off/3600000)%24;
+    el.textContent=new Date(vClock).toTimeString().slice(0,8)+"  +"+d+"d "+("0"+h).slice(-2)+"h";
+    el.style.color="var(--cyan-dim)";
+  }else{
+    el.textContent=new Date().toTimeString().slice(0,8);
+    el.style.color="";
+  }
+}
+tick();setInterval(tick,1000);
+})();
+</script>
