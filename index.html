@@ -80,9 +80,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .live{font-size:10px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
 .live i{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bp 2.4s ease-in-out infinite}
 @keyframes bp{0%,100%{opacity:1}50%{opacity:.25}}
-.brk{font-family:var(--mono);font-size:10px;letter-spacing:.13em;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);padding:5px 9px;cursor:pointer;transition:color .16s,border-color .16s}
-.brk:hover,.brk:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
-
 .stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
 #viz{display:block;width:100%;height:100%}
 .corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
@@ -92,6 +89,23 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .c-br{bottom:12px;right:12px;border-left:0;border-top:0}
 .stage-tag{position:absolute;top:14px;left:38px;pointer-events:none;display:flex;flex-direction:column;gap:5px}
 .stage-tag span{font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);text-transform:uppercase}
+
+/* THE CONTROLS SIT OVER THE INSTRUMENT'S OWN CORNER, opposite the stage tag.
+   A control that covers a contact is the "no clickable pixel" bug wearing a
+   different coat, so the corner has to be one the picture cannot reach. On a
+   WIDE stage it is: the outermost thing drawn (a drifting return at 0.955 of
+   BASE) sits 0.40 of min(W,H) from the centre, and above the breakpoint the
+   top-right corner is further out than that at every aspect ratio.
+
+   BELOW IT THAT STOPS BEING TRUE, and the arithmetic is not close — on a
+   phone-width stage at the frame's 660px minimum, ring 05 reaches ~132px
+   from the centre and a bottom corner sits ~70px away, so a sector would
+   orbit under a button roughly a fifth of the time. So the controls stop
+   overlaying and take a row of their own beneath the canvas, which is space
+   the picture was not using. The canvas shrinks to fit and the geometry
+   follows, because BASE is measured from the canvas rather than the stage. */
+.ctl{position:absolute;top:14px;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.ctl-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);text-align:right;line-height:1.6}
 
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
@@ -145,7 +159,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
 .cor-go:hover,.cor-go:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 .cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3)}
-.seg{display:flex;border:1px solid var(--silence-hair);margin-left:auto}
+.seg{display:flex;border:1px solid var(--silence-hair)}
 .seg button{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:7px 13px;background:none;border:0;color:var(--txt-2);cursor:pointer;transition:color .16s,background .16s}
 .seg button+button{border-left:1px solid var(--silence-hair)}
 .seg button[aria-pressed="true"]{background:var(--cyan-lo);color:var(--cyan)}
@@ -154,7 +168,14 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 /* The canvas holds itself still in script; this is the one animation CSS owns. */
 @media (prefers-reduced-motion: reduce){.live i{animation:none}}
 
-@media (max-width:960px){.cor-note{display:none}}
+/* The stage tag owns the top of a narrow stage, so the controls take the
+   bottom corner. Below 700 the key is hidden and that corner is empty. */
+@media (max-width:900px){
+  .stage{display:flex;flex-direction:column}
+  #viz{flex:1 1 auto;height:auto;min-height:0}
+  .ctl{position:static;align-self:flex-end;gap:8px;padding:0 20px 18px}
+}
+@media (max-width:620px){.cor-note{display:none}}
 @media (max-width:700px){
   .ro-desig{font-size:20px}
   .readout{flex-wrap:wrap;gap:10px;height:140px}
@@ -165,8 +186,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   .corridor{gap:9px}
   .cor-lab{width:100%}
   .cor-in{flex:1 1 auto;width:auto}
-  .seg{margin-left:0;width:100%}
-  .seg button{flex:1 1 auto}
 }
 </style>
 </head>
@@ -176,7 +195,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   <header class="bar">
     <div class="mark">VOIDLINE<span class="sep">//</span>SECTOR SCAN</div>
     <div class="bar-right">
-      <button class="brk" id="forgetBtn" type="button" hidden>[ FORGET ]</button>
       <span class="meta" id="clock">--:--:--</span>
       <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
     </div>
@@ -189,6 +207,18 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     <div class="stage-tag">
       <span>passive &middot; sectors announce themselves</span>
       <span>ring is declared &middot; not measured &middot; not rank</span>
+    </div>
+
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Orbit projection">
+        <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
+        <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
+      </div>
+      <div class="seg" role="group" aria-label="Remembered sector">
+        <button type="button" data-lock="1" aria-pressed="true">LOCK</button>
+        <button type="button" data-lock="0" aria-pressed="false">NO LOCK</button>
+      </div>
+      <div class="ctl-note" id="ctlNote"></div>
     </div>
 
     <div class="key">
@@ -222,10 +252,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
            placeholder="DESIGNATION OR HOST" aria-describedby="corridorNote">
     <button class="cor-go" id="corridorGo" type="button">[ RESOLVE ]</button>
     <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
-    <div class="seg" role="group" aria-label="Orbit projection">
-      <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
-      <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
-    </div>
   </footer>
 </div>
 
@@ -247,7 +273,8 @@ var LABEL_ANG=200*Math.PI/180;
    than being drawn on top of it. */
 var CADENCE={OPEN:3.2,FOCUSED:5.6,DRIFTING:9.5};
 
-var STORE_HOST="voidline.scan.sector",STORE_LABEL="voidline.scan.label";
+var STORE_HOST="voidline.scan.sector",STORE_LABEL="voidline.scan.label",
+    STORE_LOCK="voidline.scan.lock";
 function readStore(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function writeStore(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 function dropStore(k){try{localStorage.removeItem(k);}catch(e){}}
@@ -386,6 +413,9 @@ var SING_RS_KM="1.0 × 10⁹ KM";
 var SING_RS_AU="6.7 AU";
 var SING_MASS="3.4 × 10⁸ M☉";
 
+/* Default ON: the page is 90% a redirector, and a forward nobody opts into
+   is a forward that never happens. Sticky, so turning it off is said once. */
+var lockPref=readStore(STORE_LOCK)!=="0";
 var SNAP=40,hover=null,selected=null,t0=performance.now(),mx=-9999,my=-9999;
 /* THE TRANSFORM SHIPS; THE ZOOM CONTROLS DO NOT. The geometry is in world
    units behind this one transform so the routing dive can reuse it later,
@@ -692,7 +722,9 @@ function beginThreshold(label,host,hue){
   thAddr.textContent=host;
   thTrack.hidden=false;thFill.style.width="0%";
   thBack.hidden=true;
-  thNote.textContent="REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan";
+  thNote.textContent=lockPref
+    ?"REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan"
+    :"NOT REMEMBERED · THE NEXT VISIT LANDS ON THE SCAN";
   th.hidden=false;
 
   var start=performance.now(),verdict=null;
@@ -707,7 +739,7 @@ function beginThreshold(label,host,hue){
     if(verdict==="fail"){failThreshold(label);return;}
     /* "timeout" routes too: an inconclusive probe must not be more
        obstructive than no probe at all. */
-    writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);
+    if(lockPref){writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);}
     location.replace("https://"+host+"/");
   },40);
 }
@@ -790,15 +822,38 @@ corIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefaul
    scan at all means the forward did not fire, so if something is remembered
    the visitor arrived deliberately and is owed a way to undo it: `?scan`
    without a way to forget leaves you forwarded on every plain visit. */
-var rememberedHost=readStore(STORE_HOST),forgetBtn=document.getElementById("forgetBtn");
-if(rememberedHost){
-  forgetBtn.textContent="[ FORGET "+(readStore(STORE_LABEL)||rememberedHost)+" ]";
-  forgetBtn.hidden=false;
+var rememberedHost=readStore(STORE_HOST),ctlNote=document.getElementById("ctlNote");
+
+/* ROUTING ALONE MUST NOT CONSCRIPT THE DEVICE. Remembering on any click means
+   one curious look at a sector costs you this page for good: every later
+   visit forwards, and the only way back is a URL nobody told you about. The
+   forward stays the DEFAULT — the page is mostly a redirector and an opt-in
+   nobody finds would gut its whole job — but it becomes a STATED default,
+   with its consequence printed under the control, instead of something
+   inferred from a click.
+
+   NO LOCK ALSO CLEARS WHAT IS STORED. Turning it off while a sector is still
+   remembered would leave the next arrival forwarded by a preference the page
+   says is off — worse than either state honestly. That also collapses the
+   separate FORGET control into this one, which is the whole of it: what
+   happens on your next visit, and one place to change it. */
+function paintLock(){
+  document.querySelectorAll("[data-lock]").forEach(function(o){
+    o.setAttribute("aria-pressed",String((o.dataset.lock==="1")===lockPref));
+  });
+  ctlNote.textContent=!lockPref?"NEXT VISIT LANDS ON THE SCAN"
+    :(rememberedHost?"NEXT VISIT FORWARDS TO "+(readStore(STORE_LABEL)||rememberedHost)
+                    :"NEXT VISIT FORWARDS TO YOUR SECTOR");
 }
-forgetBtn.addEventListener("click",function(){
-  dropStore(STORE_HOST);dropStore(STORE_LABEL);
-  rememberedHost=null;forgetBtn.hidden=true;repaintIfStill();
+document.querySelectorAll("[data-lock]").forEach(function(b){
+  b.addEventListener("click",function(){
+    lockPref=b.dataset.lock==="1";
+    writeStore(STORE_LOCK,lockPref?"1":"0");
+    if(!lockPref){dropStore(STORE_HOST);dropStore(STORE_LABEL);rememberedHost=null;}
+    paintLock();repaintIfStill();
+  });
 });
+paintLock();
 
 /* ── PROJECTION, NOT SPEED ──────────────────────────────────────────────
    The city is not spinning faster — the instrument is showing where things

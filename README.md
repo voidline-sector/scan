@@ -24,8 +24,10 @@ nothing to hide. If you were handed an address to one, there is a field for it.
 The field resolves an address; it does not search for one, and it will not tell
 you whether a sector exists.
 
-Load `uplink.voidline.gg/?scan` to reach the scan itself without being
-forwarded — and to forget the sector this device remembers.
+Routing to a sector locks it: this device forwards there on every later
+visit. The `LOCK` / `NO LOCK` control says so before you go and turns it off
+for good, and `uplink.voidline.gg/?scan` always reaches the scan itself
+without being forwarded.
 
 ## Running it locally
 
