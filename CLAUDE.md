@@ -130,8 +130,29 @@ the literal first element of `<head>` — before the stylesheet link, before the
 fonts. HTML parsing is streaming, so it runs as soon as the first chunk of the
 document arrives and nothing else is ever requested.
 
-**Use `location.replace()`, never `location.href`.** With `href`, Back returns
-to the scan, which forwards again, and the visitor is trapped.
+**THE FORWARD IS OPT-IN.** `LOCK` is off by default: a page that forwards by
+default takes itself away from someone on the strength of a control they had
+no reason to read yet, and they never land here again to learn otherwise.
+`NO LOCK` also clears what is stored, so one control answers the whole
+question. Getting forwarded is the smaller thing to have to ask for.
+
+**The forward path `replace()`s; a deliberate route `assign()`s.** The rule
+that matters is that Back must never be swallowed by the forward — return to
+a scan that forwards on sight and you are bounced straight out again. That
+danger belongs to the forward path, and `replace()` is what disarms it: the
+scan is not left in history for the forward to fire on twice. A deliberate
+click or typed address is a different act — the visitor was looking at this
+page and chose to leave it, and the page they left belongs in their history —
+so it `assign()`s, **and the head script stands down when the entry is a
+back/forward navigation**, because a Back press is a navigation the visitor
+made by hand and the lock does not get to overrule it. Keep the two calls
+different: if that detection ever fails, `replace()` on the forward path caps
+the cost at one more Back press rather than a trap.
+
+**The scan never routes to itself.** `uplink` is a designation like any other
+and resolves to this page. Stored, it forwards the scan to the scan forever.
+The corridor field refuses it, and the head script refuses it again — the one
+that has to hold is the one that runs before anything else can intervene.
 
 **Instant for a remembered sector; a short beat (~1s) for a deliberate click.**
 §04's threshold is about entering a room where people are — social intrusion —

@@ -22,12 +22,28 @@
 
    `?scan` never forwards. It is half the escape hatch (the other half is a
    way back from inside a sector) and the address the in-sector control
-   returns to. ASCII only, so it is safe ahead of the charset below. */
+   returns to. ASCII only, so it is safe ahead of the charset below.
+
+   A BACK PRESS IS NOT AN ARRIVAL. Someone stepping back out of a sector is
+   asking for the page they just left, and forwarding them off it again is
+   the lock overruling a navigation the visitor made by hand — so the
+   forward stands down for a back/forward entry and Forward still returns
+   them. Restored from the back/forward cache this script does not run at
+   all, which is the same answer arrived at for free.
+
+   AND NEVER TO OURSELVES. `uplink` is a designation like any other and it
+   resolves to this page; stored, it would make the scan forward to the scan
+   forever. The corridor field refuses it at the door and this refuses it
+   again here, because the one that has to hold is the one on the path that
+   runs before anything else can intervene. */
 (function () {
   try {
     if (/(^|[?&])scan(=|&|$)/.test(location.search)) return;
+    var n = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+    if (n ? n.type === "back_forward"
+          : (performance.navigation && performance.navigation.type === 2)) return;
     var h = localStorage.getItem("voidline.scan.sector");
-    if (h && h.length < 254 &&
+    if (h && h !== location.hostname && h.length < 254 &&
         /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(h)) {
       location.replace("https://" + h + "/");
     }
@@ -194,6 +210,9 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
 .cor-go:hover,.cor-go:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 .cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3)}
+/* When it is carrying an answer it is not decoration, so it shows at every
+   width — including the ones that hide the standing note. */
+.cor-note.say{color:var(--cyan);display:block}
 .seg{display:flex;border:1px solid var(--silence-hair)}
 .seg button{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:7px 13px;background:none;border:0;color:var(--txt-2);cursor:pointer;transition:color .16s,background .16s}
 .seg button+button{border-left:1px solid var(--silence-hair)}
@@ -212,7 +231,13 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   .key{position:static;align-self:flex-start;bottom:auto;left:auto}
   .ctl{position:static;align-self:flex-end;top:auto;right:auto;gap:8px}
 }
-@media (max-width:620px){.cor-note{display:none}}
+@media (max-width:620px){.cor-note:not(.say){display:none}}
+/* Wrapped, the mark hung off one edge and the clock off the other. Centred,
+   the two lines read as one nameplate instead of two things that missed. */
+@media (max-width:560px){
+  .bar{justify-content:center;gap:5px 16px;text-align:center}
+  .bar-right{margin-left:0;justify-content:center}
+}
 @media (max-width:700px){
   .ro-desig{font-size:20px}
   .readout{flex-wrap:wrap;gap:9px;height:176px;align-items:flex-start}
@@ -840,7 +865,7 @@ var th=document.getElementById("threshold"),thFill=document.getElementById("thFi
     thLab=document.getElementById("thLab"),thDesig=document.getElementById("thDesig"),
     thAddr=document.getElementById("thAddr"),thTrack=document.getElementById("thTrack"),
     thNote=document.getElementById("thNote"),thBack=document.getElementById("thBack");
-var thTimer=null,thFailed=false;
+var thTimer=null,thFailed=false,thWaits=[];
 
 function beginThreshold(label,host,hue){
   thFailed=false;
@@ -851,7 +876,8 @@ function beginThreshold(label,host,hue){
   thDesig.style.color=hue||"var(--silence)";
   thAddr.textContent=host;
   thTrack.hidden=false;thFill.style.width="0%";
-  thBack.hidden=true;
+  thBack.hidden=true;thBack.textContent="[ RETURN TO SCAN ]";
+  thWaits.forEach(clearTimeout);thWaits.length=0;
   thNote.textContent=lockPref
     ?"REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan"
     :"NOT REMEMBERED · THE NEXT VISIT LANDS ON THE SCAN";
@@ -875,17 +901,41 @@ function beginThreshold(label,host,hue){
        navigation is about to want, and there is no reason to make the two
        compete for it. */
     dropProbe();
-    location.replace("https://"+host+"/");
+    /* ASSIGN, NOT REPLACE — and the difference is the whole of Back working.
+       The standing rule was replace() everywhere, to stop the forward
+       swallowing the Back press: return to a scan that forwards on sight and
+       you are bounced straight out again. That danger belongs to the FORWARD
+       path, which still replaces. This is a deliberate route — the visitor
+       was looking at this page and chose to leave it — so the page they left
+       belongs in their history, and the head script now stands down for a
+       back/forward entry. If that detection ever fails, replace() on the
+       forward path still caps the cost at one more Back press instead of a
+       trap, which is why the two paths are not the same call. */
+    location.assign("https://"+host+"/");
     /* replace() only ASKS. Until the sector's document commits we are still
        on this page, and a finished progress bar that then does nothing reads
        as a hang rather than as a wait on somebody else. The probe answering
        is not the same as the door opening — a slow sector, or a service
        worker of its own thinking it over, lands exactly here. */
-    setTimeout(function(){
+    thWaits.push(setTimeout(function(){
       if(th.hidden){return;}
       thLab.textContent="ROUTED";
       thNote.textContent="WAITING FOR "+label+" TO ANSWER · THE SCAN HAS DONE ITS PART";
-    },2500);
+    },2500));
+    /* A REQUESTED NAVIGATION CAN STILL BE CALLED OFF. If the sector takes
+       minutes to hand over a document — a slow host, or a service worker of
+       its own deciding whether to update — the visitor is left holding a
+       page that has said its piece and can do nothing else. window.stop()
+       abandons the pending navigation for real, so this is an exit and not a
+       button that merely hides the overlay while the trip continues. It is
+       not the cancellable timer §06 removed: that one stood between you and
+       a decision you had already made, and this one only appears once the
+       far end has failed to answer. */
+    thWaits.push(setTimeout(function(){
+      if(th.hidden){return;}
+      thBack.textContent="[ STOP · RETURN TO THE SCAN ]";
+      thBack.hidden=false;
+    },8000));
   },40);
 }
 function failThreshold(label){
@@ -899,9 +949,13 @@ function failThreshold(label){
 function closeThreshold(){
   /* The selection SURVIVES a failure, so the readout still names what you
      tried and TUNE is there to try it again. */
-  clearInterval(thTimer);th.hidden=true;thFailed=false;repaintIfStill();
+  clearInterval(thTimer);thWaits.forEach(clearTimeout);thWaits.length=0;
+  th.hidden=true;thFailed=false;repaintIfStill();
 }
-thBack.addEventListener("click",closeThreshold);
+thBack.addEventListener("click",function(){
+  try{window.stop();}catch(e){}          /* abandon a navigation still pending */
+  closeThreshold();
+});
 /* ESC dismisses a FAILURE, not the beat — the beat is not a timer to catch. */
 document.addEventListener("keydown",function(e){
   if(e.key!=="Escape"){return;}
@@ -980,8 +1034,26 @@ function submitCorridor(){
   /* Malformed input is not an answer about a sector, so it gets no words —
      only the field declining to leave. */
   if(!r){corIn.focus();corIn.select();return;}
+  /* THE SCAN IS NOT A SECTOR AND WILL NOT ROUTE TO ITSELF. `uplink` is a
+     designation like any other and resolves here; locked, it would forward
+     the scan to the scan on every visit for good. Saying so is safe where
+     silence is the rule elsewhere: this is a statement about THIS page, not
+     an answer about any sector, so it discloses nothing the address bar
+     does not already show. */
+  if(r.host===location.hostname){
+    say("THIS IS THE SCAN · YOU ARE ALREADY HERE");
+    corIn.focus();corIn.select();return;
+  }
   selected=null;
   beginThreshold(r.label,r.host,null);
+}
+var corNote=document.getElementById("corridorNote"),corSaid=null,corRest=corNote.innerHTML;
+function say(msg){
+  corNote.textContent=msg;corNote.classList.add("say");
+  clearTimeout(corSaid);
+  corSaid=setTimeout(function(){
+    corNote.innerHTML=corRest;corNote.classList.remove("say");
+  },5000);
 }
 corGo.addEventListener("click",submitCorridor);
 corIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submitCorridor();}});
