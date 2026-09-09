@@ -81,6 +81,14 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .live i{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bp 2.4s ease-in-out infinite}
 @keyframes bp{0%,100%{opacity:1}50%{opacity:.25}}
 .stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+/* THE CANVAS NEVER SIZES ITSELF. A canvas carries an intrinsic size and an
+   intrinsic aspect ratio from its width/height ATTRIBUTES — which resize()
+   writes — so the moment it is a flex item with an auto height, the backing
+   store feeds back into layout and the two settle at different numbers. The
+   picture then draws in one coordinate space while the pointer resolves in
+   another. A plain div has no intrinsic anything, so it takes the space and
+   the canvas simply fills it. */
+.viz-wrap{display:block;width:100%;height:100%}
 #viz{display:block;width:100%;height:100%}
 .corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
 .c-tl{top:12px;left:12px;border-right:0;border-bottom:0}
@@ -107,6 +115,9 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .ctl{position:absolute;top:14px;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
 .ctl-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);text-align:right;line-height:1.6}
 
+/* display:contents so the two keep their own absolute corners on a wide
+   stage, and become one row of the stage's own flow on a narrow one. */
+.stage-foot{display:contents}
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
 .key-sw{width:26px;display:flex;align-items:center;gap:3px;flex:0 0 auto}
@@ -125,14 +136,38 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .ro-idle{font-size:10.5px;letter-spacing:.17em;color:var(--txt-2)}
 .ro-body{display:flex;align-items:baseline;gap:18px;flex:1 1 auto;min-width:0}
 .ro-desig{font-family:var(--stencil);font-weight:800;font-size:26px;letter-spacing:.04em;line-height:1;white-space:nowrap;flex:0 0 auto}
-.ro-facts{display:flex;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;font-size:10.5px;letter-spacing:.13em;color:var(--txt-2);font-variant-numeric:tabular-nums}
-.ro-facts::-webkit-scrollbar{display:none}
-.ro-facts span{white-space:nowrap}
+/* THE FACTS WRAP INSIDE A HEIGHT THAT DOES NOT. §5's rule is that the readout
+   must never resize the stage — a growing one re-lays the map out from under
+   the pointer that caused it — and "a single non-wrapping line" was how that
+   was got. Wrapping inside a FIXED height keeps the guarantee and stops the
+   line disappearing under the button on a narrow screen. */
+.ro-facts{display:flex;flex-wrap:wrap;column-gap:0;row-gap:1px;font-size:10.5px;letter-spacing:.13em;line-height:1.7;color:var(--txt-3);font-variant-numeric:tabular-nums;overflow:hidden}
+/* A HAIRLINE BETWEEN FACTS, NOT A DOT. The facts already contain dots — in a
+   host, in "04 / 05 · DECLARED" — so a dot between them reads as part of the
+   value it sits next to. A rule cannot be mistaken for content, which is the
+   same reason type and hairlines are separate tokens in the first place. It
+   trails the fact rather than leading the next one, so a wrapped line ends on
+   the rule (reading as "continues") instead of starting with a stray one. */
+.ro-facts>span{white-space:nowrap;padding-right:13px;margin-right:13px;border-right:1px solid var(--silence-hair)}
+.ro-facts>span:last-child{padding-right:0;margin-right:0;border-right:0}
 .ro-facts b{font-weight:500;color:var(--silence)}
-.ro-act{margin-left:auto;flex:0 0 auto}
+/* CYAN IS RESERVED FOR WHAT IS LIVE. Aperture is the one fact here that is
+   actually changing — it is what the emission cadence is carrying — while a
+   ring, an orbit and a bearing are declared or derived and hold still. The
+   designation and the address wear the SECTOR's own colour, because those are
+   the two things in the row that belong to it rather than to the instrument.
+   Everything else is the instrument talking, and stays in its greys. */
+.ro-facts b.lit{color:var(--cyan)}
+.ro-act{flex:0 0 auto}
 .tune{font-family:var(--mono);font-size:11px;letter-spacing:.18em;padding:10px 20px;background:none;border:1px solid var(--cyan-frame);color:var(--cyan);cursor:pointer;transition:background .16s}
 .tune:hover,.tune:focus-visible{background:var(--cyan-lo);outline:none}
 .tune[disabled]{border-color:var(--silence-hair);color:var(--txt-3);cursor:default}
+/* Clicking a held contact again is the confirmation. On one that cannot be
+   tuned the button is the thing that has to answer, or the second click looks
+   like it was not received at all. */
+@keyframes refuse{0%,100%{border-color:var(--silence-hair);color:var(--txt-3)}
+                  30%,70%{border-color:var(--red);color:var(--red)}}
+.tune.refuse{animation:refuse .5s ease-in-out}
 
 /* THE THRESHOLD — a beat, not a cancellable timer. §04's threshold is about
    entering a room where people are; it says nothing about navigation
@@ -172,16 +207,18 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    bottom corner. Below 700 the key is hidden and that corner is empty. */
 @media (max-width:900px){
   .stage{display:flex;flex-direction:column}
-  #viz{flex:1 1 auto;height:auto;min-height:0}
-  .ctl{position:static;align-self:flex-end;gap:8px;padding:0 20px 18px}
+  .viz-wrap{flex:1 1 0;height:auto;min-height:0}
+  .stage-foot{display:flex;flex-direction:column;gap:13px;padding:0 20px 18px}
+  .key{position:static;align-self:flex-start;bottom:auto;left:auto}
+  .ctl{position:static;align-self:flex-end;top:auto;right:auto;gap:8px}
 }
 @media (max-width:620px){.cor-note{display:none}}
 @media (max-width:700px){
   .ro-desig{font-size:20px}
-  .readout{flex-wrap:wrap;gap:10px;height:140px}
-  .ro-act{margin-left:0;width:100%}
+  .readout{flex-wrap:wrap;gap:9px;height:176px;align-items:flex-start}
+  .ro-body{flex-wrap:wrap;gap:8px}
+  .ro-act{width:100%;order:2}
   .tune{width:100%}
-  .key{display:none}
   .stage-tag{left:30px}
   .corridor{gap:9px}
   .cor-lab{width:100%}
@@ -193,7 +230,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 
 <div class="frame">
   <header class="bar">
-    <div class="mark">VOIDLINE<span class="sep">//</span>SECTOR SCAN</div>
+    <div class="mark">VOIDLINE SYSTEMS<span class="sep">//</span>SECTOR SCAN</div>
     <div class="bar-right">
       <span class="meta" id="clock">--:--:--</span>
       <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
@@ -201,12 +238,22 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   </header>
 
   <main class="stage">
-    <canvas id="viz"></canvas>
+    <div class="viz-wrap"><canvas id="viz"></canvas></div>
     <span class="corner c-tl"></span><span class="corner c-tr"></span>
     <span class="corner c-bl"></span><span class="corner c-br"></span>
     <div class="stage-tag">
       <span>passive &middot; sectors announce themselves</span>
       <span>ring is declared &middot; not measured &middot; not rank</span>
+    </div>
+
+    <div class="stage-foot">
+    <div class="key">
+      <div class="key-row">
+        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
+        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; TUNABLE
+      </div>
+      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
+      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
     </div>
 
     <div class="ctl">
@@ -220,14 +267,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       </div>
       <div class="ctl-note" id="ctlNote"></div>
     </div>
-
-    <div class="key">
-      <div class="key-row">
-        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
-        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; TUNABLE
-      </div>
-      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
-      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
     </div>
 
     <div class="threshold" id="threshold" role="status" aria-live="polite" hidden>
@@ -429,9 +468,14 @@ var rate=1,vClock=Date.now(),lastFrame=performance.now();
 var CORE={state:"core"};
 
 var cv=document.getElementById("viz"),ctx=cv.getContext("2d"),W=0,H=0,BASE=1;
+/* Cheap enough to call every frame, because it does nothing unless the box
+   has actually moved — and resizing the backing store CLEARS the canvas, so
+   "does nothing" has to be the common path. */
 function resize(){
   var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);
-  W=Math.max(1,r.width);H=Math.max(1,r.height);
+  var w=Math.max(1,r.width),h=Math.max(1,r.height);
+  if(w===W&&h===H&&cv.width===Math.round(w*d)){return;}
+  W=w;H=h;
   cv.width=Math.round(W*d);cv.height=Math.round(H*d);
   ctx.setTransform(d,0,0,d,0,0);
   BASE=Math.min(W,H)*0.42;clampPan();repaintIfStill();
@@ -488,6 +532,15 @@ function drawStrip(X,Y,cr,t){
 }
 
 function draw(now){
+  /* THE MEASUREMENT IS CHECKED, NOT TRUSTED. Notifications are the fast path
+     and neither is guaranteed: a resize event fires mid-drag and reports a
+     box that is still moving, and ResizeObserver is simply absent in some
+     environments (the one this was built in delivered nothing, including the
+     initial callback every implementation is supposed to make). Reading the
+     box each frame costs one layout query on a page whose layout is already
+     clean, and it means W and H cannot be wrong for longer than a frame —
+     which matters because they are what the pointer resolves against. */
+  resize();
   var t=REDUCED?0:(now-t0)/1000,dt=Math.min(0.1,(now-lastFrame)/1000);lastFrame=now;
   /* At LIVE the clock IS absolute time rather than an accumulation of frame
      deltas, so a long-open tab cannot drift away from what everyone else
@@ -610,8 +663,13 @@ function loop(now){
 }
 function startLoop(){if(!rafOn){rafOn=true;requestAnimationFrame(loop);}}
 function repaintIfStill(){if(REDUCED&&rate===1){requestAnimationFrame(draw);}}
-/* Held still, the map may have drawn its one frame in the fallback font. */
-if(document.fonts&&document.fonts.ready){document.fonts.ready.then(repaintIfStill);}
+/* THE WEBFONT MOVES THE FURNITURE. When it lands, the key and the stage tag
+   re-wrap, which changes the canvas's box — so this has to RE-MEASURE and not
+   merely repaint. Repainting alone left the model describing a canvas one
+   line taller than the one on screen, and the pointer resolved against the
+   wrong centre. (Held still, it is also the frame that gets drawn in the
+   fallback font, so the repaint is wanted either way.) */
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(resize);}
 
 /* A POINTER RESOLVES AGAINST THE MODEL, NOT AGAINST THE PAINT — nearest
    centre wins, and NOTHING resolves beyond SNAP. The radius is not optional:
@@ -658,12 +716,56 @@ cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=nu
 cv.addEventListener("click",function(e){
   var r=cv.getBoundingClientRect();
   var c=resolveAt(e.clientX-r.left,e.clientY-r.top);
+  /* CLICKING WHAT IS ALREADY HELD IS THE CONFIRMATION. The first click is
+     "which one", the second is "go" — so the whole trip is still two clicks
+     in one place for anyone who already knows where they are going, and the
+     readout is there to be read for anyone who does not. On a contact that
+     cannot be tuned the button answers instead: a second click that does
+     nothing at all is indistinguishable from a click that missed. */
+  if(c&&c===selected){
+    if(c.state==="commissioned"){beginThreshold(c.desig,c.addr,c.hue);}
+    else{refuse();}
+    return;
+  }
   selected=c;hover=c;                          /* empty space clears both */
   paintReadout();repaintIfStill();
 });
-new ResizeObserver(resize).observe(cv);resize();
+function refuse(){
+  var b=readout.querySelector(".tune");
+  if(!b){return;}
+  b.classList.remove("refuse");
+  void b.offsetWidth;                          /* restart, not queue */
+  b.classList.add("refuse");
+}
+/* MEASURING THE CANVAS HAS TWO ROPES, AND IT NEEDS THEM.
+
+   W and H are what the pointer resolves against; the picture is redrawn from
+   them every frame. If they stop describing the canvas that is actually on
+   screen, the marks are painted in one geometry and clicked in another —
+   precisely the disagreement resolveAt() exists to end — and nothing looks
+   wrong until someone tries to click something.
+
+   The observer is kept in a variable rather than left unreachable after
+   `new ResizeObserver(resize).observe(cv)`, which is the shape this started
+   as: an observer with no reference to it is a hazard not worth debating
+   when the fix is a variable.
+
+   The window listener is the one that can be shown to work. It also covers
+   the environment where ResizeObserver delivers nothing at all — this was
+   developed in one — and it re-measures again on the next frame, because a
+   resize event fires mid-drag and the synchronous measurement catches a box
+   that is still moving. */
+var vizObserver=new ResizeObserver(resize);
+vizObserver.observe(cv);
+window.addEventListener("resize",function(){resize();requestAnimationFrame(resize);});
+resize();
 
 var readout=document.getElementById("readout"),shownContact;
+/* THE ACTION LEADS THE ROW. Pinned right it was the furthest thing on the
+   page from the contact that summoned it, and on a narrow screen the facts
+   ran underneath it and were lost. First in the flow it is where the eye
+   already is when the readout changes, and the facts get the rest. */
+function ACT(btn){return '<div class="ro-act">'+btn+'</div>';}
 function paintReadout(){
   /* The SELECTION wins. Hover previews only while nothing is held, so the
      readout cannot change out from under a pointer travelling to TUNE — the
@@ -679,12 +781,12 @@ function paintReadout(){
   /* Redaction is SELECTIVE and motivated: mass and radius are measurable from
      outside a horizon, so they print plainly. The name is not. */
   if(c.state==="core"){
-    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">SINGULARITY</span>'
+    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
+      +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">SINGULARITY</span>'
       +'<span class="ro-facts"><span>DESIGNATION <b>██&nbsp;███</b></span>'
       +'<span>M <b>'+SING_MASS+'</b></span>'
       +'<span>Rs <b>'+SING_RS_KM+'</b></span><span>&asymp; <b>'+SING_RS_AU+'</b></span>'
-      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>'
-      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT TUNABLE ]</button></div>';
+      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>';
     return;
   }
   /* A bearing is an OBSERVATION, not a meaning, and a ring is a CLAIM. Both
@@ -695,23 +797,25 @@ function paintReadout(){
   var orb=c.ring===null?"":'<span>ORBIT <b>'+fmtPeriod(orbitPeriodMin(c.ring))+'</b></span>';
   var bearing='<span>BRG <b>'+brg+'</b> &middot; OBSERVED</span>';
   if(c.state==="unresolved"){
-    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
+    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
+      +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
       +'<span class="ro-facts"><span>UNRESOLVED RETURN</span><span>EMISSION <b>INTERMITTENT</b></span>'
-      +'<span>RING '+ring+'</span>'+bearing+'</span></div>'
-      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT TUNABLE ]</button></div>';
+      +'<span>RING '+ring+'</span>'+bearing+'</span></div>';
     return;
   }
   if(c.state==="provisioned"){
-    readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">&mdash; &mdash; &mdash;</span>'
+    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button>')
+      +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">&mdash; &mdash; &mdash;</span>'
       +'<span class="ro-facts"><span>PROVISIONED</span><span>NOT COMMISSIONED</span>'
-      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+bearing+'</span></div>'
-      +'<div class="ro-act"><button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button></div>';
+      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+bearing+'</span></div>';
     return;
   }
-  readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:'+(c.hue||"var(--silence)")+'">'+esc(c.desig)+'</span>'
-    +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b>'+esc(c.aperture)+'</b></span>'
-    +'<span>RING '+ring+'</span>'+orb+bearing+'<span><b>'+esc(c.addr)+'</b></span></span></div>'
-    +'<div class="ro-act"><button class="tune" id="tuneBtn" type="button">[ TUNE ]</button></div>';
+  var own=c.hue||"var(--silence)";
+  readout.innerHTML=ACT('<button class="tune" id="tuneBtn" type="button">[ TUNE ]</button>')
+    +'<div class="ro-body"><span class="ro-desig" style="color:'+own+'">'+esc(c.desig)+'</span>'
+    +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b class="lit">'+esc(c.aperture)+'</b></span>'
+    +'<span>RING '+ring+'</span>'+orb+bearing
+    +'<span><b style="color:'+own+'">'+esc(c.addr)+'</b></span></span></div>';
   var tb=document.getElementById("tuneBtn");
   if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c.desig,c.addr,c.hue);});}
 }
@@ -754,7 +858,7 @@ function beginThreshold(label,host,hue){
   th.hidden=false;
 
   var start=performance.now(),verdict=null;
-  probe(host,function(v){verdict=v;});
+  var dropProbe=probe(host,function(v){verdict=v;});
   clearInterval(thTimer);
   thTimer=setInterval(function(){
     var p=Math.min(1,(performance.now()-start)/BEAT_MS);
@@ -766,6 +870,11 @@ function beginThreshold(label,host,hue){
     /* "timeout" routes too: an inconclusive probe must not be more
        obstructive than no probe at all. */
     if(lockPref){writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);}
+    /* Let go of the probe before asking for the document. A timed-out probe
+       is still in flight, still holding a connection to the very host the
+       navigation is about to want, and there is no reason to make the two
+       compete for it. */
+    dropProbe();
     location.replace("https://"+host+"/");
     /* replace() only ASKS. Until the sector's document commits we are still
        on this page, and a finished progress bar that then does nothing reads
@@ -806,14 +915,16 @@ document.addEventListener("keydown",function(e){
    The disclosure here is DNS's and always was — a .voidline.gg sector is a
    public record, and this reveals exactly what `dig` already does. */
 function probe(host,cb){
-  var done=false;
+  var done=false,ac=(typeof AbortController!=="undefined")?new AbortController():null;
   function settle(v){if(!done){done=true;cb(v);}}
   var to=setTimeout(function(){settle("timeout");},PROBE_MS);
   try{
-    fetch("https://"+host+"/",{mode:"no-cors",cache:"no-store"})
+    fetch("https://"+host+"/",{mode:"no-cors",cache:"no-store",signal:ac?ac.signal:undefined})
       .then(function(){clearTimeout(to);settle("ok");})
       .catch(function(){clearTimeout(to);settle("fail");});
   }catch(e){clearTimeout(to);settle("timeout");}
+  /* Returns its own undo: settling the promise does not stop the request. */
+  return function(){clearTimeout(to);done=true;if(ac){try{ac.abort();}catch(e){}}};
 }
 
 /* ── THE CORRIDOR ADDRESS ───────────────────────────────────────────────
