@@ -215,8 +215,8 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
         <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
       </div>
       <div class="seg" role="group" aria-label="Remembered sector">
-        <button type="button" data-lock="1" aria-pressed="true">LOCK</button>
-        <button type="button" data-lock="0" aria-pressed="false">NO LOCK</button>
+        <button type="button" data-lock="1" aria-pressed="false">LOCK</button>
+        <button type="button" data-lock="0" aria-pressed="true">NO LOCK</button>
       </div>
       <div class="ctl-note" id="ctlNote"></div>
     </div>
@@ -224,7 +224,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     <div class="key">
       <div class="key-row">
         <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
-        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; SELECTABLE
+        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; TUNABLE
       </div>
       <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
       <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
@@ -413,9 +413,12 @@ var SING_RS_KM="1.0 × 10⁹ KM";
 var SING_RS_AU="6.7 AU";
 var SING_MASS="3.4 × 10⁸ M☉";
 
-/* Default ON: the page is 90% a redirector, and a forward nobody opts into
-   is a forward that never happens. Sticky, so turning it off is said once. */
-var lockPref=readStore(STORE_LOCK)!=="0";
+/* DEFAULT OFF. The brief leans hard on the forward — the page is mostly a
+   redirector — but a default that forwards costs a visitor the whole page on
+   a control they had no reason to read yet, and they never see it again to
+   learn otherwise. Getting forwarded is the smaller thing to have to ask
+   for, so LOCK is the opt-in. Sticky, so it is asked for once. */
+var lockPref=readStore(STORE_LOCK)==="1";
 var SNAP=40,hover=null,selected=null,t0=performance.now(),mx=-9999,my=-9999;
 /* THE TRANSFORM SHIPS; THE ZOOM CONTROLS DO NOT. The geometry is in world
    units behind this one transform so the routing dive can reuse it later,
@@ -630,22 +633,45 @@ cv.addEventListener("mousemove",function(e){
   var r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
   var best=resolveAt(mx,my);
   if(best!==hover){hover=best;paintReadout();repaintIfStill();}
-  cv.style.cursor=(hover&&hover.state==="commissioned")?"pointer":"default";
+  cv.style.cursor=hover?"pointer":"default";  /* every contact is selectable */
 });
 cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=null;paintReadout();repaintIfStill();}});
-/* Resolved from the event rather than from `hover`, so a tap works: touch
+/* A CLICK SELECTS; IT DOES NOT ROUTE. TUNE routes.
+
+   The readout has always said POINT TO RESOLVE · SELECT TO TUNE and the code
+   did neither half: clicking a sector routed immediately, so TUNE could
+   never be reached, and leaving the canvas cleared the readout — so on the
+   way to the button it vanished from under the pointer. It was unreachable
+   on a desktop for that reason and unreachable on a touch screen for the
+   other one, which is a button that has never once been pressed.
+
+   Selecting also gives every contact a use. A provisioned mark or an
+   unresolved return has something to say and no way to say it if only
+   commissioned sectors answer a click, and on a touch screen there is no
+   hover to say it with. Now the same gesture works on both, on all three
+   kinds, and the trip is one click longer only for the person who has not
+   locked a sector — who is by then reading the thing they are about to
+   enter, which is the part of the beat worth having.
+
+   Resolved from the event rather than from `hover`, so a tap works: touch
    never produces the mousemove that would have set it. */
 cv.addEventListener("click",function(e){
   var r=cv.getBoundingClientRect();
   var c=resolveAt(e.clientX-r.left,e.clientY-r.top);
-  if(c!==hover){hover=c;paintReadout();repaintIfStill();}
-  if(c&&c.state==="commissioned"){selected=c;beginThreshold(c.desig,c.addr,c.hue);}
+  selected=c;hover=c;                          /* empty space clears both */
+  paintReadout();repaintIfStill();
 });
 new ResizeObserver(resize).observe(cv);resize();
 
-var readout=document.getElementById("readout");
+var readout=document.getElementById("readout"),shownContact;
 function paintReadout(){
-  var c=hover;
+  /* The SELECTION wins. Hover previews only while nothing is held, so the
+     readout cannot change out from under a pointer travelling to TUNE — the
+     bug that made the button unreachable. Re-rendering the same contact is
+     skipped so a hover sweep does not churn the DOM behind a pinned row. */
+  var c=selected||hover;
+  if(c===shownContact){return;}
+  shownContact=c;
   if(!c){
     readout.innerHTML='<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>';
     return;
@@ -658,7 +684,7 @@ function paintReadout(){
       +'<span>M <b>'+SING_MASS+'</b></span>'
       +'<span>Rs <b>'+SING_RS_KM+'</b></span><span>&asymp; <b>'+SING_RS_AU+'</b></span>'
       +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>'
-      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT TUNABLE ]</button></div>';
     return;
   }
   /* A bearing is an OBSERVATION, not a meaning, and a ring is a CLAIM. Both
@@ -672,7 +698,7 @@ function paintReadout(){
     readout.innerHTML='<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
       +'<span class="ro-facts"><span>UNRESOLVED RETURN</span><span>EMISSION <b>INTERMITTENT</b></span>'
       +'<span>RING '+ring+'</span>'+bearing+'</span></div>'
-      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT SELECTABLE ]</button></div>';
+      +'<div class="ro-act"><button class="tune" type="button" disabled>[ NOT TUNABLE ]</button></div>';
     return;
   }
   if(c.state==="provisioned"){
@@ -741,6 +767,16 @@ function beginThreshold(label,host,hue){
        obstructive than no probe at all. */
     if(lockPref){writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);}
     location.replace("https://"+host+"/");
+    /* replace() only ASKS. Until the sector's document commits we are still
+       on this page, and a finished progress bar that then does nothing reads
+       as a hang rather than as a wait on somebody else. The probe answering
+       is not the same as the door opening — a slow sector, or a service
+       worker of its own thinking it over, lands exactly here. */
+    setTimeout(function(){
+      if(th.hidden){return;}
+      thLab.textContent="ROUTED";
+      thNote.textContent="WAITING FOR "+label+" TO ANSWER · THE SCAN HAS DONE ITS PART";
+    },2500);
   },40);
 }
 function failThreshold(label){
@@ -752,12 +788,16 @@ function failThreshold(label){
   thBack.hidden=false;thBack.focus();
 }
 function closeThreshold(){
-  clearInterval(thTimer);th.hidden=true;selected=null;thFailed=false;repaintIfStill();
+  /* The selection SURVIVES a failure, so the readout still names what you
+     tried and TUNE is there to try it again. */
+  clearInterval(thTimer);th.hidden=true;thFailed=false;repaintIfStill();
 }
 thBack.addEventListener("click",closeThreshold);
 /* ESC dismisses a FAILURE, not the beat — the beat is not a timer to catch. */
 document.addEventListener("keydown",function(e){
-  if(e.key==="Escape"&&!th.hidden&&thFailed){closeThreshold();}
+  if(e.key!=="Escape"){return;}
+  if(!th.hidden){if(thFailed){closeThreshold();}return;}
+  if(selected){selected=null;hover=null;paintReadout();repaintIfStill();}
 });
 
 /* Opaque by design: `no-cors` resolves when the origin answers and rejects
@@ -797,7 +837,26 @@ function resolveCorridor(raw){
   if(!s||s.length>253){return null;}
   if(/[\s\/@:?#\\]/.test(s)){return null;}
   if(s.indexOf(".")<0){
-    var d=s.replace(/[^a-z0-9]/g,"");          /* R-77 → r77 */
+    /* A DESIGNATION IS A NAME AND AN ADDRESS IS A LOCATION. They are separate
+       fields in the data file on purpose, because a sovereign sector's name
+       need not resemble where it lives — which is also why the map shows the
+       designation and never the host.
+
+       This shape is the convenience for the sectors that follow the
+       convention: the map reads R-77 and the host is r77, so a hyphen is the
+       only thing between what a visitor sees and what they can type. ONLY
+       the hyphen is removed. Stripping every non-alphanumeric, which is what
+       this did first, quietly turned r!!!77 into a route.
+
+       THE COST IS A NAMING CONSTRAINT, NOT A LOST ADDRESS: r-77 and r77
+       cannot both be sectors on this domain, because a bare designation
+       cannot tell them apart and guessing wrong would land someone in a
+       different sector than the one they were handed. Anything that does not
+       follow the convention is reached by its full hostname — the second
+       shape, taken exactly as typed, and the reason a sovereign sector can
+       live anywhere at all. */
+    if(!/^[a-z0-9-]+$/.test(s)){return null;}
+    var d=s.replace(/-/g,"");                  /* R-77 → r77 */
     if(!d||d.length>63){return null;}
     return {host:d+"."+SECTOR_DOMAIN,label:s.toUpperCase()};
   }
@@ -827,10 +886,8 @@ var rememberedHost=readStore(STORE_HOST),ctlNote=document.getElementById("ctlNot
 /* ROUTING ALONE MUST NOT CONSCRIPT THE DEVICE. Remembering on any click means
    one curious look at a sector costs you this page for good: every later
    visit forwards, and the only way back is a URL nobody told you about. The
-   forward stays the DEFAULT — the page is mostly a redirector and an opt-in
-   nobody finds would gut its whole job — but it becomes a STATED default,
-   with its consequence printed under the control, instead of something
-   inferred from a click.
+   forward is worth having and it is one control away, but it is not worth
+   taking from someone who never asked for it.
 
    NO LOCK ALSO CLEARS WHAT IS STORED. Turning it off while a sector is still
    remembered would leave the next arrival forwarded by a preference the page

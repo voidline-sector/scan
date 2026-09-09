@@ -14,9 +14,8 @@ deployment with its own address, its own inhabitants and its own character.
 This page is not part of any of them.
 
 It draws what it can detect — sectors on their orbital rings around the
-singularity at the centre of the megacity — and lets you tune into one. If you
-have been here before it forwards you straight to the sector you use, which is
-most of what it does in practice.
+singularity at the centre of the megacity — and lets you tune into one. Point
+at a contact to resolve it, select it to read it, and tune to go.
 
 Sectors that have not announced themselves are not shown. There is no directory
 here and no list to enumerate: a sealed sector emits nothing, so there is
@@ -24,10 +23,17 @@ nothing to hide. If you were handed an address to one, there is a field for it.
 The field resolves an address; it does not search for one, and it will not tell
 you whether a sector exists.
 
-Routing to a sector locks it: this device forwards there on every later
-visit. The `LOCK` / `NO LOCK` control says so before you go and turns it off
-for good, and `uplink.voidline.gg/?scan` always reaches the scan itself
-without being forwarded.
+By default nothing is remembered and you land here every time. Set `LOCK`
+before you tune and that sector becomes this device's: every later visit
+forwards straight there, before the page has drawn anything. `NO LOCK` turns
+it off again and forgets what was stored, and `uplink.voidline.gg/?scan`
+always reaches the scan itself without being forwarded.
+
+A sector is named by its **designation** and reached at its **address**, and
+the two are separate: a sovereign sector's name need not resemble where it
+lives. Typing a bare designation into the corridor field assumes the house
+convention (`R-77` → `r77.voidline.gg`); anything else is reached by typing
+its full hostname, which is taken exactly as given.
 
 ## Running it locally
 
