@@ -88,6 +88,49 @@
 body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
 .frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
 
+/* ══ DISPLAY ARTIFACTS ARE SHARED; IMAGE ARTIFACTS ARE NOT ════════════
+   The sector homepages carry three glitches — chromatic convergence, scanline
+   blocks and slice displacement — and two of those three are artifacts of a
+   TRANSMITTED IMAGE. They say "you are watching a compromised feed", and they
+   need a picture to compromise. This page has no picture and never will, so
+   importing them wholesale would be a category error: a slice displacement
+   here would be a torn diagram, which is not a thing a diagram does.
+
+   What IS shared is the DISPLAY. Every Voidline surface is the same dark
+   panel, and a panel has a noise floor, a line structure, and channels that
+   occasionally fail to converge — whatever is being shown on it. Those two
+   live here, on a FIXED overlay above everything including the threshold,
+   because they belong to the glass rather than to the frame.
+
+   The instrument's own artifacts — a loss-of-signal blank and contact jitter
+   — are in script, on the canvas, because they are things happening to a
+   SIGNAL and this is the only Voidline surface that receives one. */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
+/* Padded well past the viewport so the drift never walks an edge into frame. */
+.fx::before{content:"";position:absolute;inset:-140px;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain .7s steps(1) infinite}
+/* DESATURATED, because a noise floor is not a colour. Coloured grain would be
+   the instrument owning a hue, and no sector hue is a token on this page. */
+/* steps(1) so it JUMPS between offsets: grain that eases is a moving texture,
+   and grain that cuts is a noise floor. */
+@keyframes grain{
+  0%{transform:translate(0,0)}       12.5%{transform:translate(-11px,7px)}
+  25%{transform:translate(6px,-9px)} 37.5%{transform:translate(-4px,12px)}
+  50%{transform:translate(13px,4px)} 62.5%{transform:translate(-9px,-6px)}
+  75%{transform:translate(3px,10px)} 87.5%{transform:translate(-13px,-3px)}
+}
+/* SCANLINES ARE DARK, NOT LIGHT, and that is the whole of why they can be
+   subtle rather than a texture laid over the page: against the near-black
+   ground they are invisible, and they appear only where there is light for
+   them to interrupt. A display's line structure shows up in what it is
+   displaying, which is also why this can sit over type without eating it. */
+.fx::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,0.20) 2px 3px)}
+/* The grain holds still. It stays as a texture because a noise floor is not
+   motion — what goes is the flicker. */
+@media (prefers-reduced-motion: reduce){.fx::before{animation:none}}
+
 .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
 .mark{font-family:var(--stencil);font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--cyan);white-space:nowrap}
 .mark .sep{color:var(--txt-3);margin:0 .5em}
@@ -135,6 +178,14 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    stage, and become one row of the stage's own flow on a narrow one. */
 .stage-foot{display:contents}
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+/* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. Thinning the scrim so
+   the dive can be seen also let the legend and the controls through it, and
+   they are not part of the routing moment — a visitor watching their sector
+   be resolved should not be reading a key. Dimmed rather than hidden,
+   because .stage-foot is in the stage's own flow below the breakpoint and
+   removing it there would resize the canvas mid-dive. */
+.key,.ctl,.stage-tag{transition:opacity .35s ease}
+.stage.routing .key,.stage.routing .ctl,.stage.routing .stage-tag{opacity:.10}
 .key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
 .key-sw{width:26px;display:flex;align-items:center;gap:3px;flex:0 0 auto}
 /* THREE PIPS IN THREE HUES, and none of them a sector's. The invariant a
@@ -190,11 +241,21 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    latency. You just acted, and a moment of response reads as the machine
    acknowledging you. The escape hatch is `?scan` plus a way back from inside
    a sector — neither of which is a countdown to catch. */
-.threshold{position:absolute;inset:0;background:rgba(0,5,3,0.9);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;text-align:center}
+/* DARK AT THE CENTRE, THIN AT THE EDGES — the opposite of a vignette, and
+   for the reason a vignette exists. The words sit in the middle and need a
+   ground to be read against; the dive's motion is almost entirely at the
+   PERIPHERY, where the rings sweep outward past the frame. A flat 0.9 scrim
+   hid the one and did not need to. */
+.threshold{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;
+  background:radial-gradient(ellipse at center,rgba(0,5,3,0.95) 0%,rgba(0,5,3,0.92) 22%,rgba(0,5,3,0.55) 100%)}
 .th-lab{font-size:10px;letter-spacing:.34em;color:var(--cyan-dim)}
 .th-lab.fail{color:var(--red)}
 .th-desig{font-family:var(--stencil);font-weight:800;font-size:clamp(28px,6vw,52px);letter-spacing:.03em;color:var(--silence)}
 .th-addr{font-size:11px;letter-spacing:.2em;color:var(--txt-2)}
+/* THE BEARING LINE. It states a direction and refuses a range, and under
+   reduced motion it is the whole of what the dive was saying. */
+.th-brg{font-size:9.5px;letter-spacing:.19em;color:var(--txt-3);margin-top:-8px}
+.th-brg b{font-weight:500;color:var(--cyan);font-variant-numeric:tabular-nums}
 .th-track{width:min(340px,72vw);height:2px;background:var(--silence-hair);overflow:hidden}
 .th-fill{height:100%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);width:0%}
 .th-note{font-size:9.5px;letter-spacing:.16em;color:var(--txt-3);max-width:52ch;line-height:1.7}
@@ -298,6 +359,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       <div class="th-lab" id="thLab">THRESHOLD</div>
       <div class="th-desig" id="thDesig">R-77</div>
       <div class="th-addr" id="thAddr">r77.voidline.gg</div>
+      <div class="th-brg" id="thBrg" hidden></div>
       <div class="th-track" id="thTrack"><div class="th-fill" id="thFill"></div></div>
       <div class="th-note" id="thNote"></div>
       <button class="th-back" id="thBack" type="button" hidden>[ RETURN TO SCAN ]</button>
@@ -318,6 +380,10 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
   </footer>
 </div>
+
+<!-- The glass. Outside .frame so it is over every part of it, and
+     aria-hidden because a noise floor is not content. -->
+<div class="fx" aria-hidden="true"></div>
 
 <script src="sectors.js"></script>
 <script>
@@ -370,12 +436,47 @@ var CONTACTS=DECLARED.map(function(s){
 });
 for(var u=0;u<8;u++){CONTACTS.push({state:"unresolved",seed:"ret-"+u,ring:null});}
 
+/* ── CONTACT JITTER ───────────────────────────────────────────
+   A reception artifact, and the one on this page with a hard constraint on
+   it: A POINTER RESOLVES AGAINST c.sx/c.sy AND NEVER AGAINST THE DRAWN
+   PIXEL. Jitter that moved a mark without moving those would re-create
+   exactly the class of bug the geometry work exists to prevent — and it
+   would not look broken, it would quietly stop being clickable, which is
+   worse. So the displacement is applied where sx/sy are WRITTEN and the
+   model carries it: the mark, its label, its LAST LOCK brackets, its hover
+   halo, its emission ring and the pointer all read one position, because
+   there is only one.
+
+   That is affordable because SNAP is 40px and the largest jitter is 2.2 —
+   inside the tolerance by more than an order of magnitude, so a contact
+   cannot jitter out from under a pointer that was on it.
+
+   THE MAGNITUDE CARRIES SOMETHING. A commissioned sector is a strong clean
+   return and barely moves; an unresolved return is unstable, which is WHY
+   it is unresolved. That is §03's rule that the reason should be visible
+   rather than asserted, arriving for free one more time. BEARING IS NEVER
+   TOUCHED: the readout goes on stating the derived bearing, because the
+   jitter is in the reception and not in the sky.
+
+   Local clock, like the emissions — a receiver's noise is its own, and
+   deriving it from absolute time would strobe it at ×500 under PROJECT. */
+var JITTER={commissioned:0.35,provisioned:0.9,unresolved:2.2};
+var JITTER_HZ=14;
+/* Integer mix. It allocates nothing, and it STEPS rather than sliding —
+   noise that eases is a wobble, and a wobble is a mechanism. */
+function nz(seed,step){
+  var h=(seed^Math.imul(step,2654435761))>>>0;
+  h=Math.imul(h^(h>>>15),2246822519);h=Math.imul(h^(h>>>13),3266489917);
+  return (((h^(h>>>16))>>>0)/2147483647.5)-1;
+}
+
 CONTACTS.forEach(function(c){
   c.bearing=(hash(c.seed)%3600)/10;
   c.phase=(hash(c.seed+":p")%1000)/1000;
   c.drift=c.ring===null?(0.30+((hash(c.seed+":d")%1000)/1000)*0.62):0;
   c.period=c.state==="commissioned"?(CADENCE[c.aperture]||CADENCE.OPEN)
           :(c.state==="provisioned"?14:6+((hash(c.seed+":c")%1000)/1000)*9);
+  c.hseed=hash(c.seed);c.jit=JITTER[c.state]||0;c.jx=0;c.jy=0;
   c.lit=0;c.sx=-9999;c.sy=-9999;
 });
 
@@ -508,7 +609,17 @@ function resize(){
 function cx(){return W/2+ox;}
 function cy(){return H/2+oy;}
 function R(){return BASE*scale;}
-function clampPan(){var lim=BASE*(scale-1)+8;ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));}
+/* THE DIVE OWNS THE TRANSFORM WHILE IT RUNS. This bound exists to stop a
+   drag-pan pushing the picture off the stage, and drag-pan has not shipped;
+   a scripted camera is deliberately outside it, because closing on a rim
+   contact means an offset far larger than any pan would be allowed.
+   Clamping the way home is worse still — it would snap the offset in as the
+   scale passes 1 and put a jerk in the one motion whose whole job is to be
+   smooth. */
+function clampPan(){
+  if(cam){return;}
+  var lim=BASE*(scale-1)+8;ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));
+}
 
 function angleOf(c){
   if(c.ring===null){return c.bearing*Math.PI/180;}
@@ -556,6 +667,225 @@ function drawStrip(X,Y,cr,t){
   }
 }
 
+/* ── THE INSTRUMENT'S OWN FAULTS ────────────────────────────────
+   Grain and scanlines are CSS, on the glass, shared with every Voidline
+   surface. These two are the scan's alone, because they are things that
+   happen to a SIGNAL and this is the only surface that receives one.
+
+   BOTH HOLD STILL UNDER REDUCED MOTION, and the blank especially — a screen
+   that drops to black for a tenth of a second is precisely what that
+   setting exists for. The guards are explicit rather than leaning on the
+   frame loop stopping, because PROJECT runs frames even when motion is
+   reduced.
+
+   THE CONSOLE NEVER GOES DARK. Only the canvas blanks: the bar, the clock,
+   the readout and the corridor field stay lit through it. That is the line
+   between an instrument losing its input and a page that looks broken, and
+   keeping the effect strictly inside the canvas is what holds it. */
+var LOSS_MS=95,LOSS_BACK_MS=260;
+var lossNext=0,lossUntil=0,lossBackUntil=0,lossY=0;
+var cvgNext=0,cvgUntil=0,cvgDur=1,cvgOff=0;
+/* Absent rather than "none" where it is unsupported, so this is a type test
+   and not a value test. Without it the two passes below would draw an
+   untinted double image, which is a ghost rather than a convergence. */
+var HAS_FILTER=(typeof ctx.filter==="string");
+
+/* A LOSS OF SIGNAL, NOT A DROPPED FRAME. Painted OVER a finished frame
+   rather than replacing one, and that is not a detail: sx/sy are the model
+   the pointer resolves against and they are written by the draw this would
+   have skipped. Returning early would leave them describing a picture up to
+   a tenth of a second stale — invisible, and the same disagreement between
+   the paint and the model that everything else here is arranged to prevent.
+   Drawing a frame and then covering it costs one frame's work a minute and
+   cannot be wrong. */
+function drawLoss(now){
+  var k=Math.max(0,(lossUntil-now)/LOSS_MS);
+  ctx.fillStyle="#000503";ctx.fillRect(0,0,W,H);
+  /* the last line of signal, collapsing toward the middle */
+  var y=lossY+(H/2-lossY)*(1-k);
+  ctx.fillStyle="rgba(192,202,198,"+(0.06+0.20*k).toFixed(3)+")";
+  ctx.fillRect(0,Math.round(y),W,1);
+}
+function drawReacquire(now){
+  var k=Math.max(0,(lossBackUntil-now)/LOSS_BACK_MS);
+  ctx.fillStyle="rgba(0,5,3,"+(0.74*k*k).toFixed(3)+")";
+  ctx.fillRect(0,0,W,H);
+}
+/* CONVERGENCE, NOT A SPLIT — the offset eases to ZERO, so the channels come
+   back together instead of flying apart. Same grammar as the sector
+   homepage's boot pass and about a fifth of its amplitude, which is the
+   whole of what "shared" is meant to mean: the same fault, at the volume a
+   surface with no picture on it can carry. */
+function drawConverge(now){
+  var k=Math.max(0,(cvgUntil-now)/cvgDur),off=cvgOff*k*k;
+  if(off<0.4){return;}
+  ctx.save();
+  ctx.globalCompositeOperation="lighter";
+  ctx.globalAlpha=0.20*k;
+  ctx.filter="saturate(7) hue-rotate(-60deg) brightness(1.3)";
+  ctx.drawImage(cv,-off,0,W,H);
+  ctx.filter="saturate(7) hue-rotate(150deg) brightness(1.3)";
+  ctx.drawImage(cv,off,0,W,H);
+  ctx.filter="none";
+  ctx.restore();
+}
+
+/* ── THE DIVE ────────────────────────────────────────────────
+   NEVER INTRODUCE A DELAY TO HANG AN ANIMATION ON; ONLY DECORATE A DELAY
+   THAT ALREADY EXISTS. The deliberate path has a beat and a probe in it —
+   a real wait, of somewhere between one and four seconds — and this is what
+   that wait looks like. Nothing here lengthens it by a millisecond and
+   nothing here can hold the navigation up.
+
+   THE REMEMBERED-SECTOR FORWARD IS NOT TOUCHED. It runs from the script at
+   the top of <head>, before the stylesheet and before this file is even
+   fetched, and it has no beat to decorate because having none is the entire
+   point of it.
+
+   THE MOTION IS THE ZOOM, because at ×1 there is none: a ring-04 sector
+   covers about 0.0008° in a second, so following one would be a still frame
+   with a caption on it. The transform has shipped unused since the port for
+   exactly this.
+
+   NO TIME ACCELERATION. It is available as a flourish and it is declined.
+   At these durations it buys well under a degree of arc unless it runs at
+   thousands of ×, and a city that speeds up without saying so is an
+   unlabelled PROJECT — the one control on this page that is honest
+   precisely BECAUSE it announces itself in the header clock. So vClock is
+   untouched by everything below, which is also the constraint the flourish
+   would have had to meet.
+
+   TWO DIVES, AND THE DIFFERENCE BETWEEN THEM IS THE DOCTRINE:
+
+     CONTACT — a mark on the map. The sector announced its ring and its
+     bearing, so the scan knows the PLACE, and the camera closes on it and
+     holds it centred.
+
+     BEARING — a designation typed into the corridor field. Bearing is
+     hash(designation), a pure function of the string, so a DIRECTION can be
+     computed for a sector the scan has never heard of. The ring is declared
+     and nothing declared it, so the range cannot be. The camera therefore
+     travels OUTWARD ALONG the bearing and never settles — past every ring
+     and on into the dark, with no mark at the end of it. You know which way
+     to look and not how far. It must never read as arriving somewhere.
+
+   The easing is a frame-rate-independent exponential approach, so the dive
+   has no duration to be wrong about: it looks the same whether the probe
+   answers in 200ms or times out at four seconds, and it decelerates instead
+   of arriving. */
+var CAM_HALF=0.42;                      /* seconds to close half the gap */
+/* THE RANGE THE BEARING DIVE TRAVELS TO IS NOT THE RIM AND NOT PAST IT.
+   Out past ring 05 the frame is empty dark, and coming to rest in the void
+   reads as having arrived at nothing — an answer, and the wrong one. Ending
+   between two rings, still moving, with more rings ahead of it, is the
+   picture of a search that has not finished: the range is unknown because
+   the instrument is still going, not because it ran out of city. */
+var DIVE_SCALE=4.2,BRG_SCALE=1.75,BRG_RANGE=0.42;
+var cam=null;
+function beginDive(aim){
+  /* EVERYTHING HOLDS STILL UNDER REDUCED MOTION. The bearing survives as
+     text in the threshold, so the corridor address says the same true thing
+     either way and only the movement is gone. */
+  if(REDUCED||!aim){return;}
+  if(aim.kind==="contact"){cam={kind:"contact",c:aim.c};}
+  else if(aim.kind==="bearing"){cam={kind:"bearing",brg:aim.brg,rho:0};}
+  else{return;}
+  startLoop();
+}
+function endDive(){if(cam&&cam.kind!=="home"){cam={kind:"home"};startLoop();}}
+function stepCamera(dt,t){
+  if(!cam){return;}
+  var k=1-Math.pow(0.5,dt/CAM_HALF);
+  if(cam.kind==="home"){
+    scale+=(1-scale)*k;ox+=(0-ox)*k;oy+=(0-oy)*k;
+    if(Math.abs(scale-1)<0.004&&Math.abs(ox)<0.6&&Math.abs(oy)<0.6){
+      scale=1;ox=0;oy=0;cam=null;
+    }
+    return;
+  }
+  if(cam.kind==="contact"){
+    /* Read off the MODEL every frame rather than eased on its own, so the
+       contact is centred exactly and the camera cannot lag the mark it is
+       supposed to be holding. */
+    var ang=angleOf(cam.c),rho=radiusOf(cam.c,t);
+    scale+=(DIVE_SCALE-scale)*k;
+    ox=-Math.cos(ang)*BASE*scale*rho;
+    oy=-Math.sin(ang)*BASE*scale*rho;
+    return;
+  }
+  /* Range opens more slowly than the zoom closes, so it is still travelling
+     when the zoom has all but settled — which is the difference between
+     searching and having found. */
+  scale+=(BRG_SCALE-scale)*k;
+  cam.rho+=(BRG_RANGE-cam.rho)*k*0.62;
+  ox=-Math.cos(cam.brg)*BASE*scale*cam.rho;
+  oy=-Math.sin(cam.brg)*BASE*scale*cam.rho;
+}
+/* NOTHING IS EMITTED. IT LISTENS HARDER IN ONE DIRECTION.
+
+   The first version of this was a pulse travelling outward along the
+   bearing, and it is the rejected rotating sweep wearing a different hat —
+   a beam leaving the one object on this page that emits nothing, from a
+   centre that is an absence. §03 threw that out once already.
+
+   So the wedge is a MASK and not a light: everything off the bearing dims,
+   and what is on it is merely left alone. That is what an instrument
+   narrowing its attention actually does, it needs no source, and it is the
+   difference between surveying the network and looking where you were told
+   to look. It also does not rotate, does not travel and does not sweep —
+   it is one direction, chosen by the visitor, for as long as the wait it is
+   decorating.
+
+   The wedge runs off the frame rather than fading out at a range, because
+   fading out would draw a limit on how far the scan can see in that
+   direction, and there is no such limit to draw. */
+function drawBearingMask(X,Y){
+  var half=6*Math.PI/180,a=cam.brg,far=Math.max(W,H)*3;
+  ctx.beginPath();
+  ctx.rect(0,0,W,H);
+  ctx.moveTo(X,Y);
+  ctx.arc(X,Y,far,a-half,a+half);
+  ctx.closePath();
+  ctx.fillStyle="rgba(0,5,3,0.55)";
+  ctx.fill("evenodd");
+}
+/* THE BEARING RAY, drawn only while the corridor field is searching a
+   direction, and drawn ON TOP of the mask so the one line that is the
+   actual answer keeps its full strength.
+
+   IT DISCLOSES NOTHING. The ray is drawn at hash(what you typed), which
+   anyone can compute from this page's source, and the only marks it can
+   pass near are marks the scan is already drawing with their names above
+   them. A sealed sector is structurally absent, so a ray aimed at one
+   crosses empty rings — the same picture as a ray aimed at nothing. */
+function drawBearingRay(X,Y,rad,cr){
+  var bx=Math.cos(cam.brg),by=Math.sin(cam.brg),far=2.1;
+  /* It holds its brightness the whole way out and only lets go at the far
+     end, because a ray that peaks somewhere is a ray that is pointing at a
+     range. It must not have a brightest point: there is nothing here to
+     prefer one distance over another, and a hump would be the instrument
+     guessing. */
+  var g=ctx.createLinearGradient(X+bx*cr,Y+by*cr,X+bx*rad*far,Y+by*rad*far);
+  g.addColorStop(0,"rgba(78,232,212,0.10)");
+  g.addColorStop(0.06,"rgba(78,232,212,0.70)");
+  g.addColorStop(0.80,"rgba(78,232,212,0.70)");
+  g.addColorStop(1,"rgba(78,232,212,0.42)");
+  ctx.lineWidth=1.6;
+  ctx.beginPath();
+  ctx.moveTo(X+bx*cr,Y+by*cr);ctx.lineTo(X+bx*rad*far,Y+by*rad*far);
+  ctx.strokeStyle=g;ctx.stroke();
+  /* A tick where it crosses each ring: ranges it has not ruled out and
+     cannot rule in. Five of them, all the same weight, and no reason to
+     prefer any one. */
+  ctx.lineWidth=1;
+  ctx.strokeStyle="rgba(78,232,212,0.62)";
+  RINGS.forEach(function(rg){
+    ctx.beginPath();
+    ctx.arc(X+bx*rad*rg.r,Y+by*rad*rg.r,6,0,Math.PI*2);
+    ctx.stroke();
+  });
+}
+
 function draw(now){
   /* THE MEASUREMENT IS CHECKED, NOT TRUSTED. Notifications are the fast path
      and neither is guaranteed: a resize event fires mid-drag and reports a
@@ -571,6 +901,16 @@ function draw(now){
      deltas, so a long-open tab cannot drift away from what everyone else
      sees. Only a projection integrates. */
   vClock=rate===1?Date.now():vClock+dt*1000*rate;
+  /* ONE JITTER PER CONTACT PER FRAME, computed here and read twice below —
+     by the emission and by the mark — so the two cannot drift apart by a
+     pixel even in principle. It is added where c.sx/c.sy are WRITTEN, which
+     is what makes it safe: the pointer resolves against those. */
+  var jstep=Math.floor(t*JITTER_HZ);
+  CONTACTS.forEach(function(c){
+    c.jx=REDUCED?0:nz(c.hseed,jstep)*c.jit;
+    c.jy=REDUCED?0:nz(c.hseed^1013904223,jstep)*c.jit;
+  });
+  stepCamera(dt,t);
   var X=cx(),Y=cy(),rad=R(),cr=rad*CORE_R;
   ctx.clearRect(0,0,W,H);
   ctx.lineWidth=1;ctx.textAlign="center";
@@ -596,7 +936,7 @@ function draw(now){
   if(!REDUCED){
     CONTACTS.forEach(function(c){
       var ang=angleOf(c),dist=rad*radiusOf(c,t);
-      var px=X+Math.cos(ang)*dist,py=Y+Math.sin(ang)*dist;
+      var px=X+Math.cos(ang)*dist+c.jx,py=Y+Math.sin(ang)*dist+c.jy;
       var p=pulseAt(c,t);
       c.lit=Math.max(0,1-p*5);
       var reach=c.state==="commissioned"?rad*0.30:(c.state==="provisioned"?rad*0.13:rad*0.09);
@@ -641,7 +981,7 @@ function draw(now){
   /* ── contacts ────────────────────────────────────────────────── */
   CONTACTS.forEach(function(c){
     var ang=angleOf(c),dist=rad*radiusOf(c,t);
-    c.sx=X+Math.cos(ang)*dist;c.sy=Y+Math.sin(ang)*dist;
+    c.sx=X+Math.cos(ang)*dist+c.jx;c.sy=Y+Math.sin(ang)*dist+c.jy;
     var base=c.state==="commissioned"?0.58:(c.state==="provisioned"?0.28:0.10);
     var a=Math.min(1,base+c.lit*0.45);
     var sz=c.state==="commissioned"?5:(c.state==="provisioned"?3.4:2.4);
@@ -649,6 +989,30 @@ function draw(now){
     if(hover===c||selected===c){
       ctx.beginPath();ctx.arc(c.sx,c.sy,16,0,Math.PI*2);
       ctx.strokeStyle="rgba(78,232,212,0.75)";ctx.stroke();
+    }
+    /* THE LOCK. A contact dive centres its target, which puts the mark
+       exactly behind its own name in the threshold — a 5px dot under a 52px
+       word. So what says "held" is a reticle drawn at a size the words
+       cannot cover, closing as the zoom does, in the sector's own colour
+       because it is the sector that is being held.
+
+       Drawn from c.sx/c.sy rather than from the centre it is being flown
+       to, so it is on the MARK and not on an assumption about where the
+       camera got to. */
+    if(cam&&cam.kind==="contact"&&cam.c===c){
+      var p=Math.max(0,Math.min(1,(scale-1)/(DIVE_SCALE-1)));
+      var rr=Math.min(W,H)*0.27*(1+(1-p)*0.9);
+      ctx.beginPath();ctx.arc(c.sx,c.sy,rr,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,0.42*p);ctx.stroke();
+      ctx.beginPath();ctx.arc(c.sx,c.sy,rr*1.42,0,Math.PI*2);
+      ctx.strokeStyle=colorFor(c,0.22*p);ctx.stroke();
+      ctx.strokeStyle=colorFor(c,0.70*p);
+      [0.25,0.75,1.25,1.75].forEach(function(q){
+        var a1=q*Math.PI;
+        ctx.beginPath();
+        ctx.arc(c.sx,c.sy,rr,a1-0.10,a1+0.10);
+        ctx.stroke();
+      });
     }
     if(c.state==="provisioned"){
       ctx.beginPath();ctx.arc(c.sx,c.sy,sz,0,Math.PI*2);
@@ -676,6 +1040,34 @@ function draw(now){
       ctx.fillStyle=colorFor(c,0.92);ctx.fillText(c.desig,c.sx,c.sy-15);
     }
   });
+
+  /* Last, so it dims the contacts too: a return off the bearing is exactly
+     the thing that should fall away while the instrument is listening in
+     one direction. */
+  if(cam&&cam.kind==="bearing"){drawBearingMask(X,Y);drawBearingRay(X,Y,rad,cr);}
+
+  /* ── the faults, over a finished frame ─────────────────────────────── */
+  if(REDUCED){return;}
+  /* Seeded on the first frame rather than at zero, or both fire immediately
+     — and the first thing a visitor would see is the instrument failing. */
+  if(!lossNext){lossNext=now+26000+Math.random()*52000;cvgNext=now+30000+Math.random()*58000;return;}
+  if(now>=cvgNext){
+    cvgDur=320+Math.random()*220;cvgUntil=now+cvgDur;cvgOff=3+Math.random()*3.5;
+    cvgNext=now+44000+Math.random()*62000;
+  }
+  if(HAS_FILTER&&now<cvgUntil){drawConverge(now);}
+  /* NOT DURING A DIVE. The blank is the instrument losing its input, and
+     dropping it into the one second where the visitor is being routed reads
+     as the route breaking rather than as the display faulting. The camera
+     is the only thing on this page that owns the frame outright. */
+  if(cam){return;}
+  if(now>=lossNext){
+    lossUntil=now+LOSS_MS;lossBackUntil=lossUntil+LOSS_BACK_MS;
+    lossY=H*(0.18+Math.random()*0.64);
+    lossNext=now+34000+Math.random()*74000;
+  }
+  if(now<lossUntil){drawLoss(now);}
+  else if(now<lossBackUntil){drawReacquire(now);}
 }
 
 /* Under reduced motion the city holds still — but PROJECT is an explicit
@@ -748,7 +1140,7 @@ cv.addEventListener("click",function(e){
      cannot be tuned the button answers instead: a second click that does
      nothing at all is indistinguishable from a click that missed. */
   if(c&&c===selected){
-    if(c.state==="commissioned"){beginThreshold(c.desig,c.addr,c.hue);}
+    if(c.state==="commissioned"){beginThreshold(c.desig,c.addr,c.hue,{kind:"contact",c:c});}
     else{refuse();}
     return;
   }
@@ -842,7 +1234,7 @@ function paintReadout(){
     +'<span>RING '+ring+'</span>'+orb+bearing
     +'<span><b style="color:'+own+'">'+esc(c.addr)+'</b></span></span></div>';
   var tb=document.getElementById("tuneBtn");
-  if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c.desig,c.addr,c.hue);});}
+  if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c.desig,c.addr,c.hue,{kind:"contact",c:c});});}
 }
 paintReadout();
 
@@ -861,13 +1253,15 @@ paintReadout();
    routed, and the SECTOR decides whether to admit them. The scan routes to
    the door; the door is the gate. */
 var BEAT_MS=1000,PROBE_MS=4000;
+var stage=document.querySelector(".stage");
 var th=document.getElementById("threshold"),thFill=document.getElementById("thFill"),
     thLab=document.getElementById("thLab"),thDesig=document.getElementById("thDesig"),
     thAddr=document.getElementById("thAddr"),thTrack=document.getElementById("thTrack"),
-    thNote=document.getElementById("thNote"),thBack=document.getElementById("thBack");
+    thNote=document.getElementById("thNote"),thBack=document.getElementById("thBack"),
+    thBrg=document.getElementById("thBrg");
 var thTimer=null,thFailed=false,thWaits=[];
 
-function beginThreshold(label,host,hue){
+function beginThreshold(label,host,hue,aim){
   thFailed=false;
   thLab.className="th-lab";thLab.textContent="THRESHOLD";
   thDesig.textContent=label;
@@ -878,10 +1272,23 @@ function beginThreshold(label,host,hue){
   thTrack.hidden=false;thFill.style.width="0%";
   thBack.hidden=true;thBack.textContent="[ RETURN TO SCAN ]";
   thWaits.forEach(clearTimeout);thWaits.length=0;
+  /* WHAT THE SCAN HAS, SAID IN WORDS. The dive says the same thing in
+     movement and does not run under reduced motion, so this line is what
+     carries it there — and it is the honest half either way: a direction
+     the page derived from the string you typed, and no range, because
+     nothing declared one. A contact on the map needs no such line: the
+     scan knows its place and the map is already showing it. */
+  thBrg.hidden=!aim||aim.kind==="contact";
+  if(aim&&aim.kind==="bearing"){
+    thBrg.innerHTML="BEARING <b>"+("00"+aim.deg).slice(-3)+"&deg;</b> DERIVED &middot; RANGE UNKNOWN &middot; SEARCHING A DIRECTION";
+  }else if(aim&&aim.kind==="none"){
+    thBrg.textContent="NO BEARING · A HOST IS A LOCATION, NOT A DESIGNATION";
+  }
+  endDive();beginDive(aim);
   thNote.textContent=lockPref
     ?"REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan"
     :"NOT REMEMBERED · THE NEXT VISIT LANDS ON THE SCAN";
-  th.hidden=false;
+  th.hidden=false;stage.classList.add("routing");
 
   var start=performance.now(),verdict=null;
   var dropProbe=probe(host,function(v){verdict=v;});
@@ -940,6 +1347,7 @@ function beginThreshold(label,host,hue){
 }
 function failThreshold(label){
   thFailed=true;
+  endDive();
   thLab.className="th-lab fail";thLab.textContent="NO RESPONSE";
   thDesig.textContent=label;thDesig.style.color="var(--silence)";
   thTrack.hidden=true;
@@ -950,7 +1358,8 @@ function closeThreshold(){
   /* The selection SURVIVES a failure, so the readout still names what you
      tried and TUNE is there to try it again. */
   clearInterval(thTimer);thWaits.forEach(clearTimeout);thWaits.length=0;
-  th.hidden=true;thFailed=false;repaintIfStill();
+  endDive();
+  th.hidden=true;stage.classList.remove("routing");thFailed=false;repaintIfStill();
 }
 thBack.addEventListener("click",function(){
   try{window.stop();}catch(e){}          /* abandon a navigation still pending */
@@ -1023,10 +1432,47 @@ function resolveCorridor(raw){
     if(!/^[a-z0-9-]+$/.test(s)){return null;}
     var d=s.replace(/-/g,"");                  /* R-77 → r77 */
     if(!d||d.length>63){return null;}
-    return {host:d+"."+SECTOR_DOMAIN,label:s.toUpperCase()};
+    /* THE BEARING OF A STRING, WHICH IS ALL IT IS. hash(designation) is the
+       same function every contact's bearing on the map is derived from, so
+       the scan can state a DIRECTION for a designation it has never heard
+       of — and it still cannot state a RANGE, because the ring is declared
+       and nothing here declared one. That is the corridor address rendered
+       honestly: you know which way to look and not how far.
+
+       IT IS NOT AN ORACLE, AND THE TEST IS THAT THE ANSWER DOES NOT DEPEND
+       ON THE DATA FILE. This function still touches CONTACTS and DECLARED
+       nowhere, and the number it returns is computable by anyone holding
+       this page's source and a string. Typing a designation the scan
+       happens to know produces exactly the same dive as typing one it does
+       not — which is the property that matters, because a field that flew
+       differently for a name it recognised would be confirming it.
+
+       Hashed from the UPPERCASED label, because that is the shape a
+       designation takes in the data file and the direction has to be the
+       same convention or it is a different number wearing the same word.
+
+       DERIVED, NOT OBSERVED, AND THE WORD IS LOAD-BEARING. The readout says
+       OBSERVED of a contact on the map, and that number is the hashed
+       bearing plus however far the sector has orbited since the epoch — a
+       term that needs the RING, which is exactly the thing not known here.
+       So this is the bearing the designation derives to and not where the
+       sector has got to, the two differ by an amount only the ring could
+       settle, and the page must say which one it is holding. Do not
+       "correct" this by adding an orbital term: there is no ring to compute
+       one from, and picking one would be inventing the answer the whole
+       field exists not to give. */
+    var lab=s.toUpperCase(),brg=(hash(lab)%3600)/10;
+    return {host:d+"."+SECTOR_DOMAIN,label:lab,
+            aim:{kind:"bearing",brg:brg*Math.PI/180,deg:Math.round(brg)%360}};
   }
   if(!HOSTNAME_RE.test(s)){return null;}
-  return {host:s,label:s};
+  /* A HOST IS A LOCATION AND A DESIGNATION IS A NAME — separate fields in
+     the data file, on purpose, because a sovereign sector's name need not
+     resemble where it lives. Bearing is derived from the NAME, so a full
+     hostname yields no direction at all, and the honest answer is to say so
+     and hold still rather than to hash whatever is in the box and point
+     somewhere that means nothing by the scan's own convention. */
+  return {host:s,label:s,aim:{kind:"none"}};
 }
 var corIn=document.getElementById("corridorInput"),corGo=document.getElementById("corridorGo");
 function submitCorridor(){
@@ -1045,7 +1491,7 @@ function submitCorridor(){
     corIn.focus();corIn.select();return;
   }
   selected=null;
-  beginThreshold(r.label,r.host,null);
+  beginThreshold(r.label,r.host,null,r.aim);
 }
 var corNote=document.getElementById("corridorNote"),corSaid=null,corRest=corNote.innerHTML;
 function say(msg){

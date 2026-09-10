@@ -102,6 +102,62 @@ roll call, and a permanent list of sectors is that one level up. One readout
 strip names what the pointer found, near-empty at rest. A three-row **key** is
 fine — a legend names the *kinds* and never the sectors.
 
+## The glitch treatment
+
+**DISPLAY ARTIFACTS ARE SHARED; IMAGE ARTIFACTS ARE NOT.** The sector
+homepages carry three — chromatic convergence, scanline blocks, slice
+displacement — and two of those need a *picture* to degrade. They say "you
+are watching a compromised feed"; there is no feed here, and a torn diagram
+is not a thing a diagram does. So the split is by what the artifact is
+happening *to*:
+
+- **The glass, shared with every Voidline surface** — fine grain, subtle
+  scanlines, occasional chromatic convergence. Grain and scanlines are CSS on
+  a fixed overlay above everything, including the threshold, because they
+  belong to the panel rather than to what is on it.
+- **The sector's, and never here** — slice displacement, scanline blocks.
+  They are image artifacts. This surface has no image and will not acquire
+  one to justify them.
+- **The instrument's, and only here** — a momentary loss-of-signal blank and
+  contact jitter. This is the only Voidline surface that *receives* something,
+  so it is the only one that can lose it.
+
+**Scanlines are dark, not light.** Against the near-black ground they are
+invisible and appear only where there is light to interrupt — which is both
+what a display's line structure actually does and why they can sit over
+9.5px type without eating it.
+
+**Convergence converges.** The offset eases to zero, so the channels come
+back together rather than flying apart. Same grammar as the sector homepage's
+boot pass at a fifth of the amplitude — the same fault at the volume a
+surface with no picture on it can carry.
+
+**THE CONSOLE NEVER GOES DARK.** The blank is strictly inside the canvas: the
+bar, the clock, the readout and the corridor field stay lit through it. That
+line is the whole difference between an instrument losing its input and a
+page that looks broken.
+
+**CONTACT JITTER MOVES THE MODEL, NEVER ONLY THE PAINT.** A pointer resolves
+against a contact's stored centre and never against the drawn pixel, so
+jitter that displaced a mark without displacing that centre would re-create
+the exact bug the geometry pass exists to prevent — and it would not look
+broken, it would quietly stop being clickable. The displacement is applied
+where the centre is *written*, so the mark, its label, its brackets, its
+emission and the pointer all read one position. It is affordable because the
+jitter is a couple of pixels against a 40px resolve radius.
+
+The magnitude carries the resolution class — a commissioned sector is a
+strong clean return and barely moves, an unresolved one is unstable, which is
+*why* it is unresolved. **Bearing is never jittered**: the readout goes on
+stating the derived bearing, because the jitter is in the reception and not
+in the sky.
+
+**All of it holds still under `prefers-reduced-motion`** — the blank
+especially, which is precisely what that setting exists for. Grain remains as
+a static texture, because a noise floor is not motion; only its flicker goes.
+The guards are explicit rather than relying on the frame loop stopping,
+because `PROJECT` runs frames even when motion is reduced.
+
 ## The corridor address
 
 A field where someone types a designation they were handed, and goes there.
@@ -166,6 +222,70 @@ sector (that half lives in the application repo). Neither is sufficient alone.
 
 The remembered sector is stored on this page's own origin, so it is per-device
 and outside any sector's reach.
+
+## The dive
+
+**NEVER INTRODUCE A DELAY TO HANG AN ANIMATION ON; ONLY DECORATE A DELAY THAT
+ALREADY EXISTS.** The deliberate path has a beat and a probe in it — a real
+wait of one to four seconds — and the dive is what that wait looks like. It
+lengthens nothing and can hold nothing up. **The remembered-sector forward is
+untouched**: it runs from the head script before this file is fetched, and
+having no beat is the entire point of it.
+
+**The motion is the ZOOM.** At ×1 there is none — a ring-04 sector covers
+about 0.0008° in a second — so following a contact would be a still frame
+with a caption. The transform shipped unused behind `scale`/`ox`/`oy` for
+this. While the camera has it, the pan clamp stands down; clamping the way
+home would jerk the one motion whose job is to be smooth.
+
+**No time acceleration.** It is available as a flourish and it is declined:
+at these durations it buys well under a degree of arc unless it runs at
+thousands of ×, and a city that speeds up without saying so is an unlabelled
+`PROJECT` — the one control here that is honest *because* it announces itself
+in the header clock. `vClock` is therefore never touched by the dive, which
+is also the constraint the flourish would have had to meet.
+
+**Two dives, and the difference is the doctrine.**
+
+- **CONTACT** — a mark on the map. The sector announced its ring and its
+  bearing, so the scan knows the *place*: the camera closes on it and holds
+  it centred. Centring puts the mark behind its own name in the threshold, so
+  a lock reticle in the sector's own colour is what reads as *held*.
+- **BEARING** — a designation typed into the corridor field. Bearing is
+  `hash(designation)`, a pure function of the string, so a *direction* can be
+  computed for a sector the scan has never heard of; the ring is declared and
+  nothing declared it, so the range cannot be. The camera travels outward
+  along the bearing and does not settle. **It must read as searching a
+  direction and never as arriving at a place.**
+
+**THE TYPED DIVE MUST NOT CONSULT THE DATA FILE.** A designation the scan
+knows gets exactly the same dive as one it does not — a field that flew
+differently for a name it recognised would be confirming it, which is the
+enumeration oracle arriving by another door. The bearing shown is computable
+by anyone with this page's source and a string, and a ray aimed at a sealed
+sector crosses empty rings, which is the same picture as a ray aimed at
+nothing.
+
+**A full hostname yields no bearing at all**, and the page says so. Bearing
+is derived from the *name*; a host is a location. Hashing whatever is in the
+box would point somewhere that means nothing by the scan's own convention.
+
+**DERIVED, NOT OBSERVED, and the word is load-bearing.** The readout says
+`OBSERVED` of a contact, and that number is the hashed bearing plus however
+far the sector has orbited since the epoch — a term that needs the *ring*,
+which is the thing not known here. Do not "correct" the corridor's bearing by
+adding an orbital term: there is no ring to compute one from, and choosing
+one would invent the answer the field exists not to give.
+
+**Nothing is emitted.** The first version of the bearing dive was a pulse
+travelling outward along the ray, which is the rejected rotating sweep in a
+different hat — a beam leaving the one object on this page that emits
+nothing. So the wedge is a **mask**: everything off the bearing dims, and
+what is on it is merely left alone. That is what narrowing attention looks
+like, it needs no source, and it does not rotate, travel or sweep.
+
+**The dive does not run under reduced motion**, and the bearing survives as
+text in the threshold — the same true thing, with only the movement gone.
 
 ## Sector data
 
