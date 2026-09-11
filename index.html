@@ -89,12 +89,21 @@
 body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
 .frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
 
-.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
-.mark{font-family:var(--stencil);font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--cyan);white-space:nowrap}
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
+/* A NAMEPLATE, NOT A LABEL. At 11px this read as one more piece of the
+   instrument's small print; it is the only thing on the page that names the
+   page, and it is allowed to be the largest type in the bar. */
+.mark{font-family:var(--stencil);font-weight:800;font-size:14px;letter-spacing:.18em;color:var(--cyan);white-space:nowrap}
 .mark .sep{color:var(--txt-3);margin:0 .5em}
+/* The creed takes the middle, which is the space the bar had going spare,
+   and it is the flexible one so the two ends keep their own widths. It is
+   dropped rather than wrapped where it will not fit — a nameplate that grew
+   a second row would push the stage down at exactly the widths with least
+   height to give. */
+.creed{flex:1 1 auto;min-width:0;text-align:center;font-size:9.5px;letter-spacing:.17em;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.meta{font-size:10px;letter-spacing:.14em;color:var(--txt-2);font-variant-numeric:tabular-nums}
-.live{font-size:10px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
+.meta{font-size:11px;letter-spacing:.14em;color:var(--txt-2);font-variant-numeric:tabular-nums}
+.live{font-size:11px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
 .live i{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bp 2.4s ease-in-out infinite}
 @keyframes bp{0%,100%{opacity:1}50%{opacity:.25}}
 .stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
@@ -112,8 +121,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .c-tr{top:12px;right:12px;border-left:0;border-bottom:0}
 .c-bl{bottom:12px;left:12px;border-right:0;border-top:0}
 .c-br{bottom:12px;right:12px;border-left:0;border-top:0}
-.stage-tag{position:absolute;top:14px;left:38px;pointer-events:none;display:flex;flex-direction:column;gap:5px}
-.stage-tag span{font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);text-transform:uppercase}
 
 /* THE CONTROLS SIT OVER THE INSTRUMENT'S OWN CORNER, opposite the stage tag.
    A control that covers a contact is the "no clickable pixel" bug wearing a
@@ -129,21 +136,39 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    overlaying and take a row of their own beneath the canvas, which is space
    the picture was not using. The canvas shrinks to fit and the geometry
    follows, because BASE is measured from the canvas rather than the stage. */
-.ctl{position:absolute;top:14px;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.ctl{position:absolute;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.ctl-lock{top:14px}
+.ctl-view{bottom:30px}
 .ctl-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);text-align:right;line-height:1.6}
+/* ABSENT UNTIL THERE IS A VIEW TO RESET. Below the breakpoint the controls
+   are in the stage's own flow, where a control that comes and goes could
+   re-lay the canvas out from under whatever the pointer was on — so there
+   it shares a ROW with the projection rather than stacking above it, and
+   appearing changes that row's width and never its height. */
+.reset{display:none;font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:7px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
+.reset.on{display:block}
+.reset:hover,.reset:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 
 /* display:contents so the two keep their own absolute corners on a wide
    stage, and become one row of the stage's own flow on a narrow one. */
 .stage-foot{display:contents}
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+/* THE CORRIDOR ADDRESS TAKES THE TOP-LEFT CORNER. At the foot of the page it
+   was the last thing anyone found, under a readout that is 96px of nothing
+   at rest — and it is the only route into a sector the scan cannot show, so
+   being hard to find is the one thing it could not afford. Up here it is the
+   first thing in reading order, and the footer it vacated is gone, which the
+   stage gets back. */
+.corridor{position:absolute;top:14px;left:38px;width:min(330px,38%);display:flex;flex-direction:column;gap:7px}
+.cor-row{display:flex;gap:8px;align-items:stretch}
 /* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. With no overlay left
    to hold the eye, the dive is the whole event, and a legend and a pair of
    segmented controls are not part of it — nobody watching their sector be
    resolved should be reading a key. Dimmed rather than hidden, because
    .stage-foot is in the stage's own flow below the breakpoint and removing
    it there would resize the canvas mid-dive. */
-.key,.ctl,.stage-tag{transition:opacity .35s ease}
-.stage.routing .key,.stage.routing .ctl,.stage.routing .stage-tag{opacity:.10}
+.key,.ctl,.corridor{transition:opacity .35s ease}
+.stage.routing .key,.stage.routing .ctl,.stage.routing .corridor{opacity:.10}
 .key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
 .key-sw{width:26px;display:flex;align-items:center;gap:3px;flex:0 0 auto}
 /* THREE PIPS IN THREE HUES, and none of them a sector's. The invariant a
@@ -202,14 +227,19 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .tune.refuse{animation:refuse .5s ease-in-out}
 
 /* THE CORRIDOR ADDRESS — it RESOLVES, it never SEARCHES. */
-.corridor{flex:0 0 auto;border-top:1px solid var(--silence-hair);padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--ground)}
-.cor-lab{font-size:9.5px;letter-spacing:.2em;color:var(--txt-3);white-space:nowrap}
-.cor-in{font-family:var(--mono);font-size:11px;letter-spacing:.14em;width:min(230px,42vw);padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
+/* THE LABEL LEADS AND THE PLACEHOLDER DOES NOT. A 9.5px label over an 11px
+   placeholder had the field shouting a hint and whispering its name, which
+   is backwards. They are within half a pixel of each other now, and the
+   hierarchy is carried by COLOUR instead — the label at text tier 2, the
+   placeholder at tier 3 — so nothing has to leave the page's type scale to
+   say which of the two is the heading. */
+.cor-lab{font-size:10px;letter-spacing:.2em;color:var(--txt-2);white-space:nowrap}
+.cor-in{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;flex:1 1 auto;min-width:0;padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
 .cor-in::placeholder{color:var(--txt-3);letter-spacing:.14em}
 .cor-in:focus{outline:none;border-color:var(--cyan-frame)}
 .cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
 .cor-go:hover,.cor-go:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
-.cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3)}
+.cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);line-height:1.6}
 /* When it is carrying an answer it is not decoration, so it shows at every
    width — including the ones that hide the standing note. */
 .cor-note.say{color:var(--cyan);display:block}
@@ -222,21 +252,41 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 /* The canvas holds itself still in script; this is the one animation CSS owns. */
 @media (prefers-reduced-motion: reduce){.live i{animation:none}}
 
-/* The stage tag owns the top of a narrow stage, so the controls take the
-   bottom corner. Below 700 the key is hidden and that corner is empty. */
+/* BELOW THE BREAKPOINT THE CORNERS STOP BEING CORNERS. On a wide stage each
+   of the four sits further from the centre than anything the picture draws;
+   on a phone the arithmetic is not close — ring 05 reaches ~132px from the
+   centre at the frame's 660px minimum and a corner sits ~70px away — so they
+   take a column of the stage's own flow instead, which is space the picture
+   was not using. The canvas shrinks and the geometry follows, because BASE
+   is measured from the canvas rather than from the stage.
+
+   The corridor field leads that column, as it leads the corner set: it is
+   still the first control, and on a touch screen it is the one most worth
+   reaching without scrolling. */
 @media (max-width:900px){
   .stage{display:flex;flex-direction:column}
   .viz-wrap{flex:1 1 0;height:auto;min-height:0}
-  .stage-foot{display:flex;flex-direction:column;gap:13px;padding:0 20px 18px}
+  .stage-foot{display:flex;flex-direction:column;gap:12px;padding:0 20px 16px}
+  .corridor{position:static;width:auto;top:auto;left:auto;align-self:stretch}
   .key{position:static;align-self:flex-start;bottom:auto;left:auto}
-  .ctl{position:static;align-self:flex-end;top:auto;right:auto;gap:8px}
+  .ctl{position:static;align-self:flex-end;top:auto;right:auto;bottom:auto;gap:8px}
+  /* The two control groups share a row rather than stacking, because two
+     rows of segmented buttons is most of a phone's spare height. */
+  .ctl-view{flex-direction:row-reverse;align-items:center}
+  .reset{padding:7px 9px;letter-spacing:.1em}
 }
+/* The creed is the first thing to go: it is the only text on the page that
+   says something the rest of the page also says by behaving. */
+@media (max-width:1180px){.creed{display:none}}
 @media (max-width:620px){.cor-note:not(.say){display:none}}
 /* Wrapped, the mark hung off one edge and the clock off the other. Centred,
    the two lines read as one nameplate instead of two things that missed. */
 @media (max-width:560px){
   .bar{justify-content:center;gap:5px 16px;text-align:center}
   .bar-right{margin-left:0;justify-content:center}
+  /* 31 characters at 14px and .18em is wider than a phone. It stays the
+     biggest type in the bar; it just stops being wider than the bar. */
+  .mark{font-size:12px;letter-spacing:.13em}
 }
 @media (max-width:700px){
   .ro-desig{font-size:20px}
@@ -244,11 +294,12 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   .ro-body{flex-wrap:wrap;gap:8px}
   .ro-act{width:100%;order:2}
   .tune{width:100%}
-  .stage-tag{left:30px}
-  .corridor{gap:9px}
-  .cor-lab{width:100%}
-  .cor-in{flex:1 1 auto;width:auto}
 }
+/* THE LEGEND IS THE FIRST FURNITURE TO GO on a short screen, and it can:
+   it names the three KINDS, and all three are on the stage above it wearing
+   the difference the words describe. The corridor field cannot go, because
+   nothing else on the page does its job. */
+@media (max-height:720px) and (max-width:900px){.key{display:none}}
 </style>
 </head>
 <body>
@@ -256,6 +307,14 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 <div class="frame">
   <header class="bar">
     <div class="mark">VOIDLINE SYSTEMS<span class="sep">//</span>SECTOR SCAN</div>
+    <!-- THE TWO THINGS THE INSTRUMENT HAS TO SAY ABOUT ITSELF, and both are
+         doctrine rather than decoration: the scan is passive because sectors
+         announce themselves (§05), and the ring is a claim rather than a
+         measurement or a rank (§02-IV). They used to sit over the stage's
+         top-left corner, which is now the corridor field's; in the nameplate
+         they read as the instrument declaring what it is, which is what they
+         were always for. -->
+    <div class="creed">PASSIVE &middot; SECTORS ANNOUNCE THEMSELVES &middot; RING IS DECLARED, NOT MEASURED, NOT RANK</div>
     <div class="bar-right">
       <span class="meta" id="clock">--:--:--</span>
       <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
@@ -266,12 +325,35 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     <div class="viz-wrap"><canvas id="viz"></canvas></div>
     <span class="corner c-tl"></span><span class="corner c-tr"></span>
     <span class="corner c-bl"></span><span class="corner c-br"></span>
-    <div class="stage-tag">
-      <span>passive &middot; sectors announce themselves</span>
-      <span>ring is declared &middot; not measured &middot; not rank</span>
+
+    <!-- FOUR CORNERS, ONE JOB EACH. Above the breakpoint every one of these
+         is further from the centre than the outermost thing the picture ever
+         draws, so none of them can come to rest on top of a contact; below
+         it they stop overlaying and take the stage's own flow. -->
+    <div class="stage-foot">
+
+    <!-- NOT A <form>. A form would put the typed address in the URL on
+         submit, which is the one thing this field must never do. Enter is
+         handled on the input instead. -->
+    <div class="corridor">
+      <label class="cor-lab" for="corridorInput">CORRIDOR ADDRESS</label>
+      <div class="cor-row">
+        <input class="cor-in" id="corridorInput" type="text" inputmode="url" maxlength="253"
+               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="DESIGNATION OR HOST" aria-describedby="corridorNote">
+        <button class="cor-go" id="corridorGo" type="button">[ RESOLVE ]</button>
+      </div>
+      <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
     </div>
 
-    <div class="stage-foot">
+    <div class="ctl ctl-lock">
+      <div class="seg" role="group" aria-label="Remembered sector">
+        <button type="button" data-lock="1" aria-pressed="false">LOCK</button>
+        <button type="button" data-lock="0" aria-pressed="true">NO LOCK</button>
+      </div>
+      <div class="ctl-note" id="ctlNote"></div>
+    </div>
+
     <div class="key">
       <div class="key-row">
         <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
@@ -281,33 +363,20 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
     </div>
 
-    <div class="ctl">
+    <div class="ctl ctl-view">
+      <!-- RESET VIEW belongs with the projection rather than with the lock:
+           both of these say what the instrument is currently showing, and
+           the lock says what the browser will do next time. -->
+      <button class="reset" id="resetView" type="button">[ RESET VIEW ]</button>
       <div class="seg" role="group" aria-label="Orbit projection">
         <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
         <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
       </div>
-      <div class="seg" role="group" aria-label="Remembered sector">
-        <button type="button" data-lock="1" aria-pressed="false">LOCK</button>
-        <button type="button" data-lock="0" aria-pressed="true">NO LOCK</button>
-      </div>
-      <div class="ctl-note" id="ctlNote"></div>
     </div>
     </div>
   </main>
 
   <div class="readout" id="readout"></div>
-
-  <!-- NOT A <form>. A form would put the typed address in the URL on submit,
-       which is the one thing this field must never do. Enter is handled on
-       the input instead. -->
-  <footer class="corridor">
-    <label class="cor-lab" for="corridorInput">CORRIDOR ADDRESS</label>
-    <input class="cor-in" id="corridorInput" type="text" inputmode="url" maxlength="253"
-           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-           placeholder="DESIGNATION OR HOST" aria-describedby="corridorNote">
-    <button class="cor-go" id="corridorGo" type="button">[ RESOLVE ]</button>
-    <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
-  </footer>
 </div>
 
 <script src="sectors.js"></script>
@@ -609,44 +678,151 @@ var CAM_HALF=0.42;                      /* seconds to close half the gap */
    the instrument is still going, not because it ran out of city. */
 var DIVE_SCALE=4.2,BRG_SCALE=1.75,BRG_RANGE=0.42;
 var cam=null;
+/* THE VIEW THE VISITOR PUT THE MAP IN. The dive borrows the transform and
+   gives it back: a route that ended should not also have undone somebody's
+   zoom, because they had put the picture where they wanted it before they
+   clicked anything. */
+var userView={scale:1,ox:0,oy:0};
 function beginDive(aim){
-  /* EVERYTHING HOLDS STILL UNDER REDUCED MOTION. The bearing survives as
-     text in the threshold, so the corridor address says the same true thing
+  /* EVERYTHING HOLDS STILL UNDER REDUCED MOTION. The bearing survives in
+     the readout as text, so the corridor address says the same true thing
      either way and only the movement is gone. */
   if(REDUCED||!aim){return;}
-  if(aim.kind==="contact"){cam={kind:"contact",c:aim.c};}
-  else if(aim.kind==="bearing"){cam={kind:"bearing",brg:aim.brg,rho:0};}
+  var from={scale:scale,ox:ox,oy:oy};
+  if(aim.kind==="contact"){cam={kind:"contact",c:aim.c,from:from,k:0,k2:0};}
+  else if(aim.kind==="bearing"){cam={kind:"bearing",brg:aim.brg,from:from,k:0,k2:0};}
   else{return;}
   startLoop();
 }
-function endDive(){if(cam&&cam.kind!=="home"){cam={kind:"home"};startLoop();}}
+function endDive(){
+  if(cam&&cam.kind!=="home"){
+    cam={kind:"home",from:{scale:scale,ox:ox,oy:oy},to:userView,k:0,k2:0};
+    startLoop();
+  }
+}
+/* ONE EASED PARAMETER MOVES THE WHOLE CAMERA, and that is the fix for the
+   snap this had at the start of every dive. Setting the offset straight
+   from the model each frame while only the SCALE eased meant frame one
+   already had the contact dead centre — the picture jumped the width of the
+   stage and then began zooming, so the pan and the zoom read as two events
+   instead of one move.
+
+   Now the offset is interpolated from where the camera WAS to where it needs
+   to be at the scale it is heading for, on the same curve as the scale. The
+   contact slides into the middle as the zoom closes, arriving centred at the
+   same moment it arrives near. The target is recomputed every frame, so a
+   contact that orbits while the camera is still travelling is still hit. */
+function lerp(a,b,k){return a+(b-a)*k;}
 function stepCamera(dt,t){
   if(!cam){return;}
-  var k=1-Math.pow(0.5,dt/CAM_HALF);
+  var e=1-Math.pow(0.5,dt/CAM_HALF);
+  cam.k+=(1-cam.k)*e;
+  /* A second, slower parameter, used only by the bearing dive's range: it
+     is still travelling outward when the zoom has all but settled, which is
+     the difference between searching and having found. */
+  cam.k2+=(1-cam.k2)*(1-Math.pow(0.5,dt/(CAM_HALF*2.4)));
+  var f=cam.from,k=cam.k,tScale,tox,toy;
   if(cam.kind==="home"){
-    scale+=(1-scale)*k;ox+=(0-ox)*k;oy+=(0-oy)*k;
-    if(Math.abs(scale-1)<0.004&&Math.abs(ox)<0.6&&Math.abs(oy)<0.6){
-      scale=1;ox=0;oy=0;cam=null;
-    }
+    var to=cam.to;
+    scale=lerp(f.scale,to.scale,k);ox=lerp(f.ox,to.ox,k);oy=lerp(f.oy,to.oy,k);
+    if(k>0.994){scale=to.scale;ox=to.ox;oy=to.oy;cam=null;}
     return;
   }
   if(cam.kind==="contact"){
-    /* Read off the MODEL every frame rather than eased on its own, so the
-       contact is centred exactly and the camera cannot lag the mark it is
-       supposed to be holding. */
     var ang=angleOf(cam.c),rho=radiusOf(cam.c,t);
-    scale+=(DIVE_SCALE-scale)*k;
-    ox=-Math.cos(ang)*BASE*scale*rho;
-    oy=-Math.sin(ang)*BASE*scale*rho;
-    return;
+    tScale=DIVE_SCALE;
+    tox=-Math.cos(ang)*BASE*tScale*rho;
+    toy=-Math.sin(ang)*BASE*tScale*rho;
+    ox=lerp(f.ox,tox,k);oy=lerp(f.oy,toy,k);
+  }else{
+    tScale=BRG_SCALE;
+    tox=-Math.cos(cam.brg)*BASE*tScale*BRG_RANGE;
+    toy=-Math.sin(cam.brg)*BASE*tScale*BRG_RANGE;
+    ox=lerp(f.ox,tox,cam.k2);oy=lerp(f.oy,toy,cam.k2);
   }
-  /* Range opens more slowly than the zoom closes, so it is still travelling
-     when the zoom has all but settled — which is the difference between
-     searching and having found. */
-  scale+=(BRG_SCALE-scale)*k;
-  cam.rho+=(BRG_RANGE-cam.rho)*k*0.62;
-  ox=-Math.cos(cam.brg)*BASE*scale*cam.rho;
-  oy=-Math.sin(cam.brg)*BASE*scale*cam.rho;
+  scale=lerp(f.scale,tScale,k);
+}
+
+/* ── THE VIEW: SCROLL TO ZOOM, DRAG TO PAN ─────────────────────────────
+   Held back at the port, and the reason was honest at the time — with three
+   contacts nothing at 3× is illegible at 1×, so the controls could not earn
+   their keep. The dive changed that twice over: the transform is now proven
+   by something that flies it every day, and a visitor who has watched the
+   camera close on a contact has been shown that the map has a near view
+   worth reaching by hand.
+
+   ANCHORED TO THE POINTER, so the thing being pointed at is the thing that
+   stays put. A zoom that pulls toward the middle makes you chase whatever
+   you were looking at out of the frame.
+
+   A DIVE OUTRANKS THE HAND. While the camera is flying, the wheel and the
+   drag are ignored — there is exactly one thing moving the picture at a
+   time — and when the route ends the camera returns to userView rather than
+   to 1×, because resetting somebody's zoom is not part of failing to reach
+   a sector. */
+var MIN_SCALE=1,MAX_SCALE=8;
+function markView(){userView={scale:scale,ox:ox,oy:oy};paintView();}
+function zoomAt(px,py,factor){
+  var ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,scale*factor));
+  if(ns===scale){return;}
+  /* The world point under the pointer, held fixed across the change. */
+  var wx=(px-cx())/R(),wy=(py-cy())/R();
+  scale=ns;
+  ox=px-W/2-wx*R();oy=py-H/2-wy*R();
+  clampPan();markView();repaintIfStill();
+}
+function resetView(){
+  if(scale===1&&ox===0&&oy===0){return;}
+  /* Eased home rather than snapped, and it reuses the dive's own way back,
+     so the one motion on this page that means "returning" looks the same
+     however it was asked for. */
+  cam={kind:"home",from:{scale:scale,ox:ox,oy:oy},to:{scale:1,ox:0,oy:0},k:0,k2:0};
+  userView={scale:1,ox:0,oy:0};
+  startLoop();repaintIfStill();
+}
+cv.addEventListener("wheel",function(e){
+  if(cam||REDUCED){return;}
+  e.preventDefault();
+  /* deltaMode is 0 in pixels, 1 in lines, 2 in pages, and a trackpad and a
+     notched wheel disagree by an order of magnitude — normalise before it
+     reaches the exponent or one of them zooms a hundred times faster. */
+  var d=e.deltaY*(e.deltaMode===1?16:(e.deltaMode===2?400:1));
+  var r=cv.getBoundingClientRect();
+  zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-Math.max(-240,Math.min(240,d))*0.0018));
+},{passive:false});
+
+var drag=null,dragMoved=0;
+cv.addEventListener("mousedown",function(e){
+  if(cam||REDUCED||e.button!==0){return;}
+  drag={x:e.clientX,y:e.clientY,ox:ox,oy:oy};dragMoved=0;
+});
+window.addEventListener("mousemove",function(e){
+  if(!drag){return;}
+  var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  dragMoved=Math.max(dragMoved,Math.abs(dx)+Math.abs(dy));
+  ox=drag.ox+dx;oy=drag.oy+dy;
+  clampPan();markView();repaintIfStill();
+});
+window.addEventListener("mouseup",function(){drag=null;});
+/* DOUBLE-CLICK RESETS, BUT ONLY ON EMPTY SPACE. On a contact the second
+   click is already the confirmation that routes, and a gesture cannot mean
+   two things on the same pixel. */
+cv.addEventListener("dblclick",function(e){
+  if(cam){return;}
+  var r=cv.getBoundingClientRect();
+  if(resolveAt(e.clientX-r.left,e.clientY-r.top)){return;}
+  resetView();
+});
+/* Shown only when there is something to reset, and given its space rather
+   than its display, so appearing cannot re-lay the stage out from under the
+   pointer on a narrow screen. */
+var resetBtn,viewShown=null;
+function paintView(){
+  if(!resetBtn){return;}
+  var show=!cam&&!(scale===1&&ox===0&&oy===0);
+  if(show===viewShown){return;}
+  viewShown=show;
+  resetBtn.classList.toggle("on",show);
 }
 /* NOTHING IS EMITTED. IT LISTENS HARDER IN ONE DIRECTION.
 
@@ -870,6 +1046,12 @@ function draw(now){
      the thing that should fall away while the instrument is listening in
      one direction. */
   if(cam&&cam.kind==="bearing"){drawBearingMask(X,Y);drawBearingRay(X,Y,rad,cr);}
+
+  /* Guarded, so this is one comparison a frame — and it is here rather than
+     in the handlers because the camera can put the view back on its own,
+     and a RESET VIEW left showing over an un-zoomed map is a control that
+     lies about what it would do. */
+  paintView();
 }
 
 /* Under reduced motion the city holds still — but PROJECT is an explicit
@@ -1404,6 +1586,10 @@ paintLock();
    honest by SAYING SO: while it runs the clock reads the projected time and
    its offset, so it cannot be left running and mistaken for now. LIVE snaps
    back to absolute time. */
+resetBtn=document.getElementById("resetView");
+resetBtn.addEventListener("click",resetView);
+paintView();
+
 var statusWord=document.getElementById("statusWord");
 document.querySelectorAll("[data-rate]").forEach(function(b){
   b.addEventListener("click",function(){
