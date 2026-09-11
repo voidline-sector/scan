@@ -136,9 +136,21 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    overlaying and take a row of their own beneath the canvas, which is space
    the picture was not using. The canvas shrinks to fit and the geometry
    follows, because BASE is measured from the canvas rather than the stage. */
+/* THE BRACKET IS THE INSET. Each corner mark runs from 12px to 29px in both
+   axes, so 30 is the first row that clears one — which is what the bottom
+   pair were already doing and the top pair were not. At top:14 the first
+   line of text sat alongside the bracket's own arm, level with it instead of
+   diagonally off it, and the corner read as two things that missed rather
+   than as one thing framed. Both ends now start where the bracket stops. */
 .ctl{position:absolute;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
-.ctl-lock{top:14px}
+.ctl-lock{top:30px}
 .ctl-view{bottom:30px}
+/* The magnification, next to the control that undoes it, and only while
+   there is one. Dropped below the breakpoint, where the two controls share a
+   row that has no width to spare — and where there is no wheel to have
+   turned in the first place. */
+.view-mag{display:none;font-size:9px;letter-spacing:.16em;color:var(--txt-3);font-variant-numeric:tabular-nums}
+.view-mag.on{display:block}
 .ctl-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);text-align:right;line-height:1.6}
 /* ABSENT UNTIL THERE IS A VIEW TO RESET. Below the breakpoint the controls
    are in the stage's own flow, where a control that comes and goes could
@@ -159,7 +171,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    being hard to find is the one thing it could not afford. Up here it is the
    first thing in reading order, and the footer it vacated is gone, which the
    stage gets back. */
-.corridor{position:absolute;top:14px;left:38px;width:min(330px,38%);display:flex;flex-direction:column;gap:7px}
+.corridor{position:absolute;top:30px;left:38px;width:min(330px,38%);display:flex;flex-direction:column;gap:7px}
 .cor-row{display:flex;gap:8px;align-items:stretch}
 /* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. With no overlay left
    to hold the eye, the dive is the whole event, and a legend and a pair of
@@ -273,6 +285,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   /* The two control groups share a row rather than stacking, because two
      rows of segmented buttons is most of a phone's spare height. */
   .ctl-view{flex-direction:row-reverse;align-items:center}
+  .view-mag.on{display:none}
   .reset{padding:7px 9px;letter-spacing:.1em}
 }
 /* The creed is the first thing to go: it is the only text on the page that
@@ -343,7 +356,11 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
                placeholder="DESIGNATION OR HOST" aria-describedby="corridorNote">
         <button class="cor-go" id="corridorGo" type="button">[ RESOLVE ]</button>
       </div>
-      <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
+      <!-- BROKEN WHERE IT MEANS TO BREAK. Left to wrap on width it split
+           "THE SECTOR ANSWERS / OR NOTHING DOES" — a clause cut in half, and
+           the half left hanging was the one that carries the rule. Two lines
+           by hand: what the field is, then what it will and will not do. -->
+      <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE<br>THE SECTOR ANSWERS OR NOTHING DOES</span>
     </div>
 
     <div class="ctl ctl-lock">
@@ -367,6 +384,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       <!-- RESET VIEW belongs with the projection rather than with the lock:
            both of these say what the instrument is currently showing, and
            the lock says what the browser will do next time. -->
+      <div class="view-mag" id="viewMag"></div>
       <button class="reset" id="resetView" type="button">[ RESET VIEW ]</button>
       <div class="seg" role="group" aria-label="Orbit projection">
         <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
@@ -816,13 +834,20 @@ cv.addEventListener("dblclick",function(e){
 /* Shown only when there is something to reset, and given its space rather
    than its display, so appearing cannot re-lay the stage out from under the
    pointer on a narrow screen. */
-var resetBtn,viewShown=null;
+var resetBtn,viewMag,viewShown=null,shownMag=null;
 function paintView(){
   if(!resetBtn){return;}
   var show=!cam&&!(scale===1&&ox===0&&oy===0);
-  if(show===viewShown){return;}
-  viewShown=show;
-  resetBtn.classList.toggle("on",show);
+  if(show!==viewShown){
+    viewShown=show;
+    resetBtn.classList.toggle("on",show);
+    viewMag.classList.toggle("on",show);
+  }
+  /* Only written when the number itself changes, so a drag does not touch
+     the DOM on every frame it moves through. */
+  if(!show){return;}
+  var m=scale.toFixed(1);
+  if(m!==shownMag){shownMag=m;viewMag.textContent="MAG ×"+m;}
 }
 /* NOTHING IS EMITTED. IT LISTENS HARDER IN ONE DIRECTION.
 
@@ -980,9 +1005,29 @@ function draw(now){
     var a=Math.min(1,base+c.lit*0.45);
     var sz=c.state==="commissioned"?5:(c.state==="provisioned"?3.4:2.4);
 
+    /* HOVER SAYS "THIS ONE". HELD SAYS "AGAIN TO GO."
+       The readout's [ TUNE ] was doing that work alone, and it is at the far
+       end of the page from the contact that summoned it — so the second half
+       of the affordance now lives where the pointer already is. A held
+       contact keeps its ring and gains four brackets that breathe, which is
+       the shape the dive's lock closes in: the cue and the thing it promises
+       share a vocabulary.
+
+       Held STILL under reduced motion, where the brackets carry the state on
+       their own — the difference between hovered and held is a shape and not
+       a movement, so nothing is lost by holding it. */
     if(hover===c||selected===c){
       ctx.beginPath();ctx.arc(c.sx,c.sy,16,0,Math.PI*2);
       ctx.strokeStyle="rgba(78,232,212,0.75)";ctx.stroke();
+    }
+    if(selected===c&&!(cam&&cam.kind==="contact"&&cam.c===c)){
+      var breath=REDUCED?0.5:0.5+0.5*Math.sin(t*2.7);
+      var brr=21+breath*4,bra=0.30+breath*0.28;
+      ctx.strokeStyle="rgba(78,232,212,"+bra.toFixed(3)+")";
+      [0.25,0.75,1.25,1.75].forEach(function(q){
+        var qa=q*Math.PI;
+        ctx.beginPath();ctx.arc(c.sx,c.sy,brr,qa-0.21,qa+0.21);ctx.stroke();
+      });
     }
     /* THE LOCK — a reticle closing as the zoom does, in the sector's own
        colour, because it is the sector being held. It was invented to punch
@@ -1587,6 +1632,7 @@ paintLock();
    its offset, so it cannot be left running and mistaken for now. LIVE snaps
    back to absolute time. */
 resetBtn=document.getElementById("resetView");
+viewMag=document.getElementById("viewMag");
 resetBtn.addEventListener("click",resetView);
 paintView();
 
