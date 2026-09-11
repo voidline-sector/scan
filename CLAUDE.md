@@ -102,61 +102,45 @@ roll call, and a permanent list of sectors is that one level up. One readout
 strip names what the pointer found, near-empty at rest. A three-row **key** is
 fine — a legend names the *kinds* and never the sectors.
 
-## The glitch treatment
+## The glitch treatment — there isn't one
 
-**DISPLAY ARTIFACTS ARE SHARED; IMAGE ARTIFACTS ARE NOT.** The sector
-homepages carry three — chromatic convergence, scanline blocks, slice
-displacement — and two of those need a *picture* to degrade. They say "you
-are watching a compromised feed"; there is no feed here, and a torn diagram
-is not a thing a diagram does. So the split is by what the artifact is
-happening *to*:
+**GLITCH IS PER-SURFACE, NOT SHARED.** The obvious rule — *display artifacts
+are shared, image artifacts are not* — was built out in full and then taken
+back out, because the premise underneath it is wrong: there is no house
+display layer that every Voidline surface must wear. Each instrument decides
+for itself, and some of them are not glitchy at all. **This one is clean**,
+and it should stay clean unless something specific earns its place.
 
-- **The glass, shared with every Voidline surface** — fine grain, subtle
-  scanlines, occasional chromatic convergence. Grain and scanlines are CSS on
-  a fixed overlay above everything, including the threshold, because they
-  belong to the panel rather than to what is on it.
-- **The sector's, and never here** — slice displacement, scanline blocks.
-  They are image artifacts. This surface has no image and will not acquire
-  one to justify them.
-- **The instrument's, and only here** — a momentary loss-of-signal blank and
-  contact jitter. This is the only Voidline surface that *receives* something,
-  so it is the only one that can lose it.
+The sector homepages keep all three of theirs. Nothing here is a judgement on
+those; they have a picture to degrade and the artifacts are about the feed.
 
-**Scanlines are dark, not light.** Against the near-black ground they are
-invisible and appear only where there is light to interrupt — which is both
-what a display's line structure actually does and why they can sit over
-9.5px type without eating it.
+**What was tried, and why each came out** — so none of it is re-tried on the
+strength of the idea alone:
 
-**Convergence converges.** The offset eases to zero, so the channels come
-back together rather than flying apart. Same grammar as the sector homepage's
-boot pass at a fifth of the amplitude — the same fault at the volume a
-surface with no picture on it can carry.
+- **Scanlines.** Invisible against the ground, exactly as designed, which
+  left them landing only on the type and the ring hairlines — the two things
+  on the page with the least contrast to spare. A surface whose legibility
+  doctrine is *text and hairlines are different tokens* cannot then run a
+  1px comb over both. It did not read as a display; it read as muddy.
+- **Fine grain.** On a ground this dark it lifts the floor without ever
+  reading as texture. Cost with no effect.
+- **A loss-of-signal blank.** It reads as the page reloading, which is the
+  one thing it must never look like — and keeping the console lit through it
+  was not enough to fix that, because a picture that vanishes for a tenth of
+  a second is a picture that vanished.
+- **Occasional chromatic convergence.** Rare enough and subtle enough to go
+  unnoticed over minutes of watching. An effect nobody sees is not subtle,
+  it is absent, and it should either earn attention or not ship.
+- **Contact jitter.** It reads as every sector having a continuous spasm
+  rather than as an unstable return, and a mark that never holds still is
+  harder to point at even when the model follows it exactly.
 
-**THE CONSOLE NEVER GOES DARK.** The blank is strictly inside the canvas: the
-bar, the clock, the readout and the corridor field stay lit through it. That
-line is the whole difference between an instrument losing its input and a
-page that looks broken.
-
-**CONTACT JITTER MOVES THE MODEL, NEVER ONLY THE PAINT.** A pointer resolves
-against a contact's stored centre and never against the drawn pixel, so
-jitter that displaced a mark without displacing that centre would re-create
-the exact bug the geometry pass exists to prevent — and it would not look
-broken, it would quietly stop being clickable. The displacement is applied
-where the centre is *written*, so the mark, its label, its brackets, its
-emission and the pointer all read one position. It is affordable because the
-jitter is a couple of pixels against a 40px resolve radius.
-
-The magnitude carries the resolution class — a commissioned sector is a
-strong clean return and barely moves, an unresolved one is unstable, which is
-*why* it is unresolved. **Bearing is never jittered**: the readout goes on
-stating the derived bearing, because the jitter is in the reception and not
-in the sky.
-
-**All of it holds still under `prefers-reduced-motion`** — the blank
-especially, which is precisely what that setting exists for. Grain remains as
-a static texture, because a noise floor is not motion; only its flicker goes.
-The guards are explicit rather than relying on the frame loop stopping,
-because `PROJECT` runs frames even when motion is reduced.
+**THE ONE RULE WORTH KEEPING FROM ALL OF IT:** if anything ever displaces a
+mark, **it displaces the model**. A pointer resolves against a contact's
+stored centre and never against the drawn pixel, so paint-only movement does
+not look broken — it quietly stops being clickable, which is worse than
+looking broken. Apply the displacement where the centre is written, and the
+mark, its label, its brackets, its emission and the pointer stay one thing.
 
 ## The corridor address
 
@@ -242,15 +226,42 @@ home would jerk the one motion whose job is to be smooth.
 at these durations it buys well under a degree of arc unless it runs at
 thousands of ×, and a city that speeds up without saying so is an unlabelled
 `PROJECT` — the one control here that is honest *because* it announces itself
-in the header clock. `vClock` is therefore never touched by the dive, which
-is also the constraint the flourish would have had to meet.
+in the header clock. `vClock` is therefore never touched by the dive.
+
+**THERE IS NO OVERLAY, AND THERE MUST NOT BE ONE.** A full-stage scrim
+printing the designation across the middle was built first, and it covered
+the only thing worth watching. **The dive is the response to the click**, not
+a background to it. Nothing that card said was new either: you clicked R-77,
+so being told R-77 is not information; its progress bar measured a wait the
+zoom already measures; and its line about what would be remembered is a
+standing fact that already sits in the corner permanently. **A sentence
+nobody has time to finish is worse than no sentence**, because it reads as
+having missed something.
+
+So the two surfaces the page already has carry it:
+
+- **The map** shows the dive, and the target's own label grows with the
+  camera. The mark has always carried its name — that is the console, and it
+  does not cover the thing it is labelling.
+- **The readout** carries the state. It is already fixed-height and already
+  naming what was resolved, so **the row does not jump when a route starts**:
+  the same facts stay in the same place and only the action slot changes
+  word. It changes shape exactly once, when the subject does — the moment the
+  navigation has been asked for and not answered, the useful thing is no
+  longer the sector's orbit but whether anyone is answering.
+
+**A route owns the readout while it runs.** With no overlay, the pointer is
+live over a diving map, so hover must not repaint the row out from under the
+visitor, and a click during the beat does nothing — **the beat is not a
+cancellable timer**. `STOP` appears only after the far end has failed to
+answer, and it calls `window.stop()`, so it is a real exit rather than a
+control that tidies the page while the trip continues.
 
 **Two dives, and the difference is the doctrine.**
 
 - **CONTACT** — a mark on the map. The sector announced its ring and its
   bearing, so the scan knows the *place*: the camera closes on it and holds
-  it centred. Centring puts the mark behind its own name in the threshold, so
-  a lock reticle in the sector's own colour is what reads as *held*.
+  it centred, with a lock reticle in the sector's own colour.
 - **BEARING** — a designation typed into the corridor field. Bearing is
   `hash(designation)`, a pure function of the string, so a *direction* can be
   computed for a sector the scan has never heard of; the ring is declared and
@@ -284,8 +295,8 @@ nothing. So the wedge is a **mask**: everything off the bearing dims, and
 what is on it is merely left alone. That is what narrowing attention looks
 like, it needs no source, and it does not rotate, travel or sweep.
 
-**The dive does not run under reduced motion**, and the bearing survives as
-text in the threshold — the same true thing, with only the movement gone.
+**The dive does not run under reduced motion**, and the bearing survives in
+the readout as text — the same true thing, with only the movement gone.
 
 ## Sector data
 

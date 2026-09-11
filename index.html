@@ -82,54 +82,12 @@
    from the data file at runtime, and the instrument's palette does not know
    it — baking one in would make one sector's sky into network furniture. */
 *{box-sizing:border-box}
-/* An author display rule outranks the UA [hidden] rule, and .threshold sets
-   display:flex — without this the overlay is on screen from the first paint. */
+/* Nothing carries `hidden` today, but an author display rule outranks the
+   UA one, so the first element given both would be on screen from the
+   first paint. That shipped once; the guard costs nothing. */
 [hidden]{display:none!important}
 body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
 .frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
-
-/* ══ DISPLAY ARTIFACTS ARE SHARED; IMAGE ARTIFACTS ARE NOT ════════════
-   The sector homepages carry three glitches — chromatic convergence, scanline
-   blocks and slice displacement — and two of those three are artifacts of a
-   TRANSMITTED IMAGE. They say "you are watching a compromised feed", and they
-   need a picture to compromise. This page has no picture and never will, so
-   importing them wholesale would be a category error: a slice displacement
-   here would be a torn diagram, which is not a thing a diagram does.
-
-   What IS shared is the DISPLAY. Every Voidline surface is the same dark
-   panel, and a panel has a noise floor, a line structure, and channels that
-   occasionally fail to converge — whatever is being shown on it. Those two
-   live here, on a FIXED overlay above everything including the threshold,
-   because they belong to the glass rather than to the frame.
-
-   The instrument's own artifacts — a loss-of-signal blank and contact jitter
-   — are in script, on the canvas, because they are things happening to a
-   SIGNAL and this is the only Voidline surface that receives one. */
-.fx{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
-/* Padded well past the viewport so the drift never walks an edge into frame. */
-.fx::before{content:"";position:absolute;inset:-140px;opacity:.05;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation:grain .7s steps(1) infinite}
-/* DESATURATED, because a noise floor is not a colour. Coloured grain would be
-   the instrument owning a hue, and no sector hue is a token on this page. */
-/* steps(1) so it JUMPS between offsets: grain that eases is a moving texture,
-   and grain that cuts is a noise floor. */
-@keyframes grain{
-  0%{transform:translate(0,0)}       12.5%{transform:translate(-11px,7px)}
-  25%{transform:translate(6px,-9px)} 37.5%{transform:translate(-4px,12px)}
-  50%{transform:translate(13px,4px)} 62.5%{transform:translate(-9px,-6px)}
-  75%{transform:translate(3px,10px)} 87.5%{transform:translate(-13px,-3px)}
-}
-/* SCANLINES ARE DARK, NOT LIGHT, and that is the whole of why they can be
-   subtle rather than a texture laid over the page: against the near-black
-   ground they are invisible, and they appear only where there is light for
-   them to interrupt. A display's line structure shows up in what it is
-   displaying, which is also why this can sit over type without eating it. */
-.fx::after{content:"";position:absolute;inset:0;
-  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,0.20) 2px 3px)}
-/* The grain holds still. It stays as a texture because a noise floor is not
-   motion — what goes is the flicker. */
-@media (prefers-reduced-motion: reduce){.fx::before{animation:none}}
 
 .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
 .mark{font-family:var(--stencil);font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--cyan);white-space:nowrap}
@@ -178,12 +136,12 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    stage, and become one row of the stage's own flow on a narrow one. */
 .stage-foot{display:contents}
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-/* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. Thinning the scrim so
-   the dive can be seen also let the legend and the controls through it, and
-   they are not part of the routing moment — a visitor watching their sector
-   be resolved should not be reading a key. Dimmed rather than hidden,
-   because .stage-foot is in the stage's own flow below the breakpoint and
-   removing it there would resize the canvas mid-dive. */
+/* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. With no overlay left
+   to hold the eye, the dive is the whole event, and a legend and a pair of
+   segmented controls are not part of it — nobody watching their sector be
+   resolved should be reading a key. Dimmed rather than hidden, because
+   .stage-foot is in the stage's own flow below the breakpoint and removing
+   it there would resize the canvas mid-dive. */
 .key,.ctl,.stage-tag{transition:opacity .35s ease}
 .stage.routing .key,.stage.routing .ctl,.stage.routing .stage-tag{opacity:.10}
 .key-row{display:flex;align-items:center;gap:10px;font-size:9.5px;letter-spacing:.16em;color:var(--txt-2)}
@@ -229,38 +187,19 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .tune{font-family:var(--mono);font-size:11px;letter-spacing:.18em;padding:10px 20px;background:none;border:1px solid var(--cyan-frame);color:var(--cyan);cursor:pointer;transition:background .16s}
 .tune:hover,.tune:focus-visible{background:var(--cyan-lo);outline:none}
 .tune[disabled]{border-color:var(--silence-hair);color:var(--txt-3);cursor:default}
+/* A ROUTE'S ACTION SLOT IS THE STATE, in the place the button was, so the
+   row does not jump when it changes. Lit rather than greyed out: nothing is
+   broken, something is happening. */
+.tune.busy[disabled]{border-color:var(--cyan-frame);color:var(--cyan);opacity:.72}
+.tune.bad{border-color:var(--red);color:var(--red)}
+.tune.bad:hover,.tune.bad:focus-visible{background:rgba(255,48,48,0.12);color:var(--red)}
+.ro-facts>span.bad,.ro-facts>span.bad b{color:var(--red)}
 /* Clicking a held contact again is the confirmation. On one that cannot be
    tuned the button is the thing that has to answer, or the second click looks
    like it was not received at all. */
 @keyframes refuse{0%,100%{border-color:var(--silence-hair);color:var(--txt-3)}
                   30%,70%{border-color:var(--red);color:var(--red)}}
 .tune.refuse{animation:refuse .5s ease-in-out}
-
-/* THE THRESHOLD — a beat, not a cancellable timer. §04's threshold is about
-   entering a room where people are; it says nothing about navigation
-   latency. You just acted, and a moment of response reads as the machine
-   acknowledging you. The escape hatch is `?scan` plus a way back from inside
-   a sector — neither of which is a countdown to catch. */
-/* DARK AT THE CENTRE, THIN AT THE EDGES — the opposite of a vignette, and
-   for the reason a vignette exists. The words sit in the middle and need a
-   ground to be read against; the dive's motion is almost entirely at the
-   PERIPHERY, where the rings sweep outward past the frame. A flat 0.9 scrim
-   hid the one and did not need to. */
-.threshold{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;
-  background:radial-gradient(ellipse at center,rgba(0,5,3,0.95) 0%,rgba(0,5,3,0.92) 22%,rgba(0,5,3,0.55) 100%)}
-.th-lab{font-size:10px;letter-spacing:.34em;color:var(--cyan-dim)}
-.th-lab.fail{color:var(--red)}
-.th-desig{font-family:var(--stencil);font-weight:800;font-size:clamp(28px,6vw,52px);letter-spacing:.03em;color:var(--silence)}
-.th-addr{font-size:11px;letter-spacing:.2em;color:var(--txt-2)}
-/* THE BEARING LINE. It states a direction and refuses a range, and under
-   reduced motion it is the whole of what the dive was saying. */
-.th-brg{font-size:9.5px;letter-spacing:.19em;color:var(--txt-3);margin-top:-8px}
-.th-brg b{font-weight:500;color:var(--cyan);font-variant-numeric:tabular-nums}
-.th-track{width:min(340px,72vw);height:2px;background:var(--silence-hair);overflow:hidden}
-.th-fill{height:100%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);width:0%}
-.th-note{font-size:9.5px;letter-spacing:.16em;color:var(--txt-3);max-width:52ch;line-height:1.7}
-.th-back{font-family:var(--mono);font-size:11px;letter-spacing:.2em;padding:11px 26px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
-.th-back:hover,.th-back:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 
 /* THE CORRIDOR ADDRESS — it RESOLVES, it never SEARCHES. */
 .corridor{flex:0 0 auto;border-top:1px solid var(--silence-hair);padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--ground)}
@@ -354,16 +293,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       <div class="ctl-note" id="ctlNote"></div>
     </div>
     </div>
-
-    <div class="threshold" id="threshold" role="status" aria-live="polite" hidden>
-      <div class="th-lab" id="thLab">THRESHOLD</div>
-      <div class="th-desig" id="thDesig">R-77</div>
-      <div class="th-addr" id="thAddr">r77.voidline.gg</div>
-      <div class="th-brg" id="thBrg" hidden></div>
-      <div class="th-track" id="thTrack"><div class="th-fill" id="thFill"></div></div>
-      <div class="th-note" id="thNote"></div>
-      <button class="th-back" id="thBack" type="button" hidden>[ RETURN TO SCAN ]</button>
-    </div>
   </main>
 
   <div class="readout" id="readout"></div>
@@ -380,10 +309,6 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     <span class="cor-note" id="corridorNote">TYPED ONLY &middot; NOT SEARCHABLE &middot; THE SECTOR ANSWERS OR NOTHING DOES</span>
   </footer>
 </div>
-
-<!-- The glass. Outside .frame so it is over every part of it, and
-     aria-hidden because a noise floor is not content. -->
-<div class="fx" aria-hidden="true"></div>
 
 <script src="sectors.js"></script>
 <script>
@@ -436,47 +361,12 @@ var CONTACTS=DECLARED.map(function(s){
 });
 for(var u=0;u<8;u++){CONTACTS.push({state:"unresolved",seed:"ret-"+u,ring:null});}
 
-/* ── CONTACT JITTER ───────────────────────────────────────────
-   A reception artifact, and the one on this page with a hard constraint on
-   it: A POINTER RESOLVES AGAINST c.sx/c.sy AND NEVER AGAINST THE DRAWN
-   PIXEL. Jitter that moved a mark without moving those would re-create
-   exactly the class of bug the geometry work exists to prevent — and it
-   would not look broken, it would quietly stop being clickable, which is
-   worse. So the displacement is applied where sx/sy are WRITTEN and the
-   model carries it: the mark, its label, its LAST LOCK brackets, its hover
-   halo, its emission ring and the pointer all read one position, because
-   there is only one.
-
-   That is affordable because SNAP is 40px and the largest jitter is 2.2 —
-   inside the tolerance by more than an order of magnitude, so a contact
-   cannot jitter out from under a pointer that was on it.
-
-   THE MAGNITUDE CARRIES SOMETHING. A commissioned sector is a strong clean
-   return and barely moves; an unresolved return is unstable, which is WHY
-   it is unresolved. That is §03's rule that the reason should be visible
-   rather than asserted, arriving for free one more time. BEARING IS NEVER
-   TOUCHED: the readout goes on stating the derived bearing, because the
-   jitter is in the reception and not in the sky.
-
-   Local clock, like the emissions — a receiver's noise is its own, and
-   deriving it from absolute time would strobe it at ×500 under PROJECT. */
-var JITTER={commissioned:0.35,provisioned:0.9,unresolved:2.2};
-var JITTER_HZ=14;
-/* Integer mix. It allocates nothing, and it STEPS rather than sliding —
-   noise that eases is a wobble, and a wobble is a mechanism. */
-function nz(seed,step){
-  var h=(seed^Math.imul(step,2654435761))>>>0;
-  h=Math.imul(h^(h>>>15),2246822519);h=Math.imul(h^(h>>>13),3266489917);
-  return (((h^(h>>>16))>>>0)/2147483647.5)-1;
-}
-
 CONTACTS.forEach(function(c){
   c.bearing=(hash(c.seed)%3600)/10;
   c.phase=(hash(c.seed+":p")%1000)/1000;
   c.drift=c.ring===null?(0.30+((hash(c.seed+":d")%1000)/1000)*0.62):0;
   c.period=c.state==="commissioned"?(CADENCE[c.aperture]||CADENCE.OPEN)
           :(c.state==="provisioned"?14:6+((hash(c.seed+":c")%1000)/1000)*9);
-  c.hseed=hash(c.seed);c.jit=JITTER[c.state]||0;c.jx=0;c.jy=0;
   c.lit=0;c.sx=-9999;c.sy=-9999;
 });
 
@@ -667,69 +557,6 @@ function drawStrip(X,Y,cr,t){
   }
 }
 
-/* ── THE INSTRUMENT'S OWN FAULTS ────────────────────────────────
-   Grain and scanlines are CSS, on the glass, shared with every Voidline
-   surface. These two are the scan's alone, because they are things that
-   happen to a SIGNAL and this is the only surface that receives one.
-
-   BOTH HOLD STILL UNDER REDUCED MOTION, and the blank especially — a screen
-   that drops to black for a tenth of a second is precisely what that
-   setting exists for. The guards are explicit rather than leaning on the
-   frame loop stopping, because PROJECT runs frames even when motion is
-   reduced.
-
-   THE CONSOLE NEVER GOES DARK. Only the canvas blanks: the bar, the clock,
-   the readout and the corridor field stay lit through it. That is the line
-   between an instrument losing its input and a page that looks broken, and
-   keeping the effect strictly inside the canvas is what holds it. */
-var LOSS_MS=95,LOSS_BACK_MS=260;
-var lossNext=0,lossUntil=0,lossBackUntil=0,lossY=0;
-var cvgNext=0,cvgUntil=0,cvgDur=1,cvgOff=0;
-/* Absent rather than "none" where it is unsupported, so this is a type test
-   and not a value test. Without it the two passes below would draw an
-   untinted double image, which is a ghost rather than a convergence. */
-var HAS_FILTER=(typeof ctx.filter==="string");
-
-/* A LOSS OF SIGNAL, NOT A DROPPED FRAME. Painted OVER a finished frame
-   rather than replacing one, and that is not a detail: sx/sy are the model
-   the pointer resolves against and they are written by the draw this would
-   have skipped. Returning early would leave them describing a picture up to
-   a tenth of a second stale — invisible, and the same disagreement between
-   the paint and the model that everything else here is arranged to prevent.
-   Drawing a frame and then covering it costs one frame's work a minute and
-   cannot be wrong. */
-function drawLoss(now){
-  var k=Math.max(0,(lossUntil-now)/LOSS_MS);
-  ctx.fillStyle="#000503";ctx.fillRect(0,0,W,H);
-  /* the last line of signal, collapsing toward the middle */
-  var y=lossY+(H/2-lossY)*(1-k);
-  ctx.fillStyle="rgba(192,202,198,"+(0.06+0.20*k).toFixed(3)+")";
-  ctx.fillRect(0,Math.round(y),W,1);
-}
-function drawReacquire(now){
-  var k=Math.max(0,(lossBackUntil-now)/LOSS_BACK_MS);
-  ctx.fillStyle="rgba(0,5,3,"+(0.74*k*k).toFixed(3)+")";
-  ctx.fillRect(0,0,W,H);
-}
-/* CONVERGENCE, NOT A SPLIT — the offset eases to ZERO, so the channels come
-   back together instead of flying apart. Same grammar as the sector
-   homepage's boot pass and about a fifth of its amplitude, which is the
-   whole of what "shared" is meant to mean: the same fault, at the volume a
-   surface with no picture on it can carry. */
-function drawConverge(now){
-  var k=Math.max(0,(cvgUntil-now)/cvgDur),off=cvgOff*k*k;
-  if(off<0.4){return;}
-  ctx.save();
-  ctx.globalCompositeOperation="lighter";
-  ctx.globalAlpha=0.20*k;
-  ctx.filter="saturate(7) hue-rotate(-60deg) brightness(1.3)";
-  ctx.drawImage(cv,-off,0,W,H);
-  ctx.filter="saturate(7) hue-rotate(150deg) brightness(1.3)";
-  ctx.drawImage(cv,off,0,W,H);
-  ctx.filter="none";
-  ctx.restore();
-}
-
 /* ── THE DIVE ────────────────────────────────────────────────
    NEVER INTRODUCE A DELAY TO HANG AN ANIMATION ON; ONLY DECORATE A DELAY
    THAT ALREADY EXISTS. The deliberate path has a beat and a probe in it —
@@ -901,15 +728,6 @@ function draw(now){
      deltas, so a long-open tab cannot drift away from what everyone else
      sees. Only a projection integrates. */
   vClock=rate===1?Date.now():vClock+dt*1000*rate;
-  /* ONE JITTER PER CONTACT PER FRAME, computed here and read twice below —
-     by the emission and by the mark — so the two cannot drift apart by a
-     pixel even in principle. It is added where c.sx/c.sy are WRITTEN, which
-     is what makes it safe: the pointer resolves against those. */
-  var jstep=Math.floor(t*JITTER_HZ);
-  CONTACTS.forEach(function(c){
-    c.jx=REDUCED?0:nz(c.hseed,jstep)*c.jit;
-    c.jy=REDUCED?0:nz(c.hseed^1013904223,jstep)*c.jit;
-  });
   stepCamera(dt,t);
   var X=cx(),Y=cy(),rad=R(),cr=rad*CORE_R;
   ctx.clearRect(0,0,W,H);
@@ -936,7 +754,7 @@ function draw(now){
   if(!REDUCED){
     CONTACTS.forEach(function(c){
       var ang=angleOf(c),dist=rad*radiusOf(c,t);
-      var px=X+Math.cos(ang)*dist+c.jx,py=Y+Math.sin(ang)*dist+c.jy;
+      var px=X+Math.cos(ang)*dist,py=Y+Math.sin(ang)*dist;
       var p=pulseAt(c,t);
       c.lit=Math.max(0,1-p*5);
       var reach=c.state==="commissioned"?rad*0.30:(c.state==="provisioned"?rad*0.13:rad*0.09);
@@ -981,7 +799,7 @@ function draw(now){
   /* ── contacts ────────────────────────────────────────────────── */
   CONTACTS.forEach(function(c){
     var ang=angleOf(c),dist=rad*radiusOf(c,t);
-    c.sx=X+Math.cos(ang)*dist+c.jx;c.sy=Y+Math.sin(ang)*dist+c.jy;
+    c.sx=X+Math.cos(ang)*dist;c.sy=Y+Math.sin(ang)*dist;
     var base=c.state==="commissioned"?0.58:(c.state==="provisioned"?0.28:0.10);
     var a=Math.min(1,base+c.lit*0.45);
     var sz=c.state==="commissioned"?5:(c.state==="provisioned"?3.4:2.4);
@@ -990,23 +808,23 @@ function draw(now){
       ctx.beginPath();ctx.arc(c.sx,c.sy,16,0,Math.PI*2);
       ctx.strokeStyle="rgba(78,232,212,0.75)";ctx.stroke();
     }
-    /* THE LOCK. A contact dive centres its target, which puts the mark
-       exactly behind its own name in the threshold — a 5px dot under a 52px
-       word. So what says "held" is a reticle drawn at a size the words
-       cannot cover, closing as the zoom does, in the sector's own colour
-       because it is the sector that is being held.
+    /* THE LOCK — a reticle closing as the zoom does, in the sector's own
+       colour, because it is the sector being held. It was invented to punch
+       through a scrim and is now the opposite job: with nothing covering
+       the stage it can sit close in around the mark instead of framing the
+       whole frame.
 
        Drawn from c.sx/c.sy rather than from the centre it is being flown
        to, so it is on the MARK and not on an assumption about where the
        camera got to. */
     if(cam&&cam.kind==="contact"&&cam.c===c){
       var p=Math.max(0,Math.min(1,(scale-1)/(DIVE_SCALE-1)));
-      var rr=Math.min(W,H)*0.27*(1+(1-p)*0.9);
+      var rr=Math.min(W,H)*0.13*(1+(1-p)*1.6);
       ctx.beginPath();ctx.arc(c.sx,c.sy,rr,0,Math.PI*2);
-      ctx.strokeStyle=colorFor(c,0.42*p);ctx.stroke();
+      ctx.strokeStyle=colorFor(c,0.34*p);ctx.stroke();
       ctx.beginPath();ctx.arc(c.sx,c.sy,rr*1.42,0,Math.PI*2);
-      ctx.strokeStyle=colorFor(c,0.22*p);ctx.stroke();
-      ctx.strokeStyle=colorFor(c,0.70*p);
+      ctx.strokeStyle=colorFor(c,0.15*p);ctx.stroke();
+      ctx.strokeStyle=colorFor(c,0.55*p);
       [0.25,0.75,1.25,1.75].forEach(function(q){
         var a1=q*Math.PI;
         ctx.beginPath();
@@ -1036,8 +854,15 @@ function draw(now){
     /* label ABOVE for every sector, so marked and unmarked read identically
        and the LAST LOCK brackets have the sides to themselves */
     if(c.state==="commissioned"){
-      ctx.font='600 10px "Martian Mono","JetBrains Mono",monospace';
-      ctx.fillStyle=colorFor(c,0.92);ctx.fillText(c.desig,c.sx,c.sy-15);
+      /* THE LABEL IS THE CONSOLE. The overlay that printed a designation
+         across the middle of the stage is gone, and the mark has always
+         carried its own name — so during a dive that name simply grows with
+         the camera. Same fact, same place, in the sector's own colour, and
+         it does not cover the thing it is labelling. */
+      var lift=(cam&&cam.kind==="contact"&&cam.c===c)
+        ?Math.max(0,Math.min(1,(scale-1)/(DIVE_SCALE-1))):0;
+      ctx.font='600 '+(10+lift*15).toFixed(1)+'px "Martian Mono","JetBrains Mono",monospace';
+      ctx.fillStyle=colorFor(c,0.92);ctx.fillText(c.desig,c.sx,c.sy-15-lift*22);
     }
   });
 
@@ -1045,29 +870,6 @@ function draw(now){
      the thing that should fall away while the instrument is listening in
      one direction. */
   if(cam&&cam.kind==="bearing"){drawBearingMask(X,Y);drawBearingRay(X,Y,rad,cr);}
-
-  /* ── the faults, over a finished frame ─────────────────────────────── */
-  if(REDUCED){return;}
-  /* Seeded on the first frame rather than at zero, or both fire immediately
-     — and the first thing a visitor would see is the instrument failing. */
-  if(!lossNext){lossNext=now+26000+Math.random()*52000;cvgNext=now+30000+Math.random()*58000;return;}
-  if(now>=cvgNext){
-    cvgDur=320+Math.random()*220;cvgUntil=now+cvgDur;cvgOff=3+Math.random()*3.5;
-    cvgNext=now+44000+Math.random()*62000;
-  }
-  if(HAS_FILTER&&now<cvgUntil){drawConverge(now);}
-  /* NOT DURING A DIVE. The blank is the instrument losing its input, and
-     dropping it into the one second where the visitor is being routed reads
-     as the route breaking rather than as the display faulting. The camera
-     is the only thing on this page that owns the frame outright. */
-  if(cam){return;}
-  if(now>=lossNext){
-    lossUntil=now+LOSS_MS;lossBackUntil=lossUntil+LOSS_BACK_MS;
-    lossY=H*(0.18+Math.random()*0.64);
-    lossNext=now+34000+Math.random()*74000;
-  }
-  if(now<lossUntil){drawLoss(now);}
-  else if(now<lossBackUntil){drawReacquire(now);}
 }
 
 /* Under reduced motion the city holds still — but PROJECT is an explicit
@@ -1107,10 +909,14 @@ function resolveAt(px,py){
 cv.addEventListener("mousemove",function(e){
   var r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
   var best=resolveAt(mx,my);
-  if(best!==hover){hover=best;paintReadout();repaintIfStill();}
-  cv.style.cursor=hover?"pointer":"default";  /* every contact is selectable */
+  /* A ROUTE HOLDS THE ROW. With no overlay in the way the pointer is live
+     over a diving map, and a hover that repainted the readout would take
+     the state out from under the visitor mid-route. The model goes on
+     tracking; only the row is pinned. */
+  if(best!==hover){hover=best;if(!route){paintReadout();}repaintIfStill();}
+  cv.style.cursor=(hover&&!route)?"pointer":"default";  /* every contact is selectable */
 });
-cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=null;paintReadout();repaintIfStill();}});
+cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=null;if(!route){paintReadout();}repaintIfStill();}});
 /* A CLICK SELECTS; IT DOES NOT ROUTE. TUNE routes.
 
    The readout has always said POINT TO RESOLVE · SELECT TO TUNE and the code
@@ -1131,6 +937,10 @@ cv.addEventListener("mouseleave",function(){mx=-9999;my=-9999;if(hover){hover=nu
    Resolved from the event rather than from `hover`, so a tap works: touch
    never produces the mousemove that would have set it. */
 cv.addEventListener("click",function(e){
+  /* THE BEAT IS NOT A CANCELLABLE TIMER, so a click during a route does
+     nothing at all. A FAILED route is the exception: the same click that
+     dismisses it is the one that picks the next thing. */
+  if(route){if(route.phase!=="fail"){return;}clearRoute();}
   var r=cv.getBoundingClientRect();
   var c=resolveAt(e.clientX-r.left,e.clientY-r.top);
   /* CLICKING WHAT IS ALREADY HELD IS THE CONFIRMATION. The first click is
@@ -1140,7 +950,7 @@ cv.addEventListener("click",function(e){
      cannot be tuned the button answers instead: a second click that does
      nothing at all is indistinguishable from a click that missed. */
   if(c&&c===selected){
-    if(c.state==="commissioned"){beginThreshold(c.desig,c.addr,c.hue,{kind:"contact",c:c});}
+    if(c.state==="commissioned"){beginRoute(c.desig,c.addr,c.hue,{kind:"contact",c:c},c);}
     else{refuse();}
     return;
   }
@@ -1183,14 +993,25 @@ var readout=document.getElementById("readout"),shownContact;
    ran underneath it and were lost. First in the flow it is where the eye
    already is when the readout changes, and the facts get the rest. */
 function ACT(btn){return '<div class="ro-act">'+btn+'</div>';}
-function paintReadout(){
+function paintReadout(force){
   /* The SELECTION wins. Hover previews only while nothing is held, so the
      readout cannot change out from under a pointer travelling to TUNE — the
      bug that made the button unreachable. Re-rendering the same contact is
-     skipped so a hover sweep does not churn the DOM behind a pinned row. */
-  var c=selected||hover;
-  if(c===shownContact){return;}
+     skipped so a hover sweep does not churn the DOM behind a pinned row.
+
+     AND A ROUTE OUTRANKS BOTH. With the overlay gone the pointer is live
+     over a diving map, so the row has to be nailed down: while a route runs
+     it names what is being routed to and nothing else. `force` is how a
+     phase change gets past the cache. */
+  var c=route?route.c:(selected||hover);
+  if(c===shownContact&&!force){return;}
   shownContact=c;
+  /* THE ROW CHANGES SHAPE ONCE, and only when the subject does. Through the
+     beat it is still the contact. The moment the navigation has been asked
+     for and not answered, the useful thing is no longer the sector's orbit
+     but whether anyone is answering — so it becomes a status line. */
+  if(route&&route.phase!=="beat"){readout.innerHTML=statusRow();wireRouteBtn();return;}
+  if(route&&!c){readout.innerHTML=corridorRow();return;}
   if(!c){
     readout.innerHTML='<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>';
     return;
@@ -1228,25 +1049,43 @@ function paintReadout(){
     return;
   }
   var own=c.hue||"var(--silence)";
-  readout.innerHTML=ACT('<button class="tune" id="tuneBtn" type="button">[ TUNE ]</button>')
+  /* THE ROW DOES NOT MOVE WHEN THE ROUTE STARTS. Only the action slot
+     changes word: the facts a visitor was reading a moment ago are the same
+     facts in the same place, and nothing new is put in front of somebody
+     who is about to leave. */
+  readout.innerHTML=ACT(route?routeAct():'<button class="tune" id="tuneBtn" type="button">[ TUNE ]</button>')
     +'<div class="ro-body"><span class="ro-desig" style="color:'+own+'">'+esc(c.desig)+'</span>'
     +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b class="lit">'+esc(c.aperture)+'</b></span>'
     +'<span>RING '+ring+'</span>'+orb+bearing
     +'<span><b style="color:'+own+'">'+esc(c.addr)+'</b></span></span></div>';
   var tb=document.getElementById("tuneBtn");
-  if(tb){tb.addEventListener("click",function(){selected=c;beginThreshold(c.desig,c.addr,c.hue,{kind:"contact",c:c});});}
+  if(tb){tb.addEventListener("click",function(){selected=c;beginRoute(c.desig,c.addr,c.hue,{kind:"contact",c:c},c);});}
 }
 paintReadout();
 
-/* ── THE THRESHOLD, THE PROBE AND THE ROUTE ─────────────────────────────
-   A deliberate route gets a beat. The probe rides inside it and never
-   outside it — where there is no beat there is no probe, and the browser's
-   own error page is then the correct outcome.
+/* ── THE ROUTE, THE BEAT AND THE PROBE ──────────────────────────
+   THERE IS NO OVERLAY, AND ITS REMOVAL IS THE POINT. A full-stage scrim
+   with the designation printed across the middle of it was covering the
+   only thing worth watching: the dive IS the response to the click, and it
+   was playing behind a card that named what had just been clicked.
 
-   WHAT FAILURE MAY SAY IS BOUNDED. "NO RESPONSE FROM R-83" is a statement
-   about this attempt. "R-83 DOES NOT EXIST" is a statement about the world
-   and is not ours to make: unreachable, asleep, mistyped and never-existed
-   are genuinely indistinguishable from here, and the ambiguity is TRUE.
+   NOTHING THAT CARD SAID WAS NEW. You clicked R-77; being told R-77 is not
+   information. Its progress bar measured a wait the zoom already measures,
+   and measured it twice. Its line about what would be remembered is a
+   standing fact that already sits in the corner permanently, where it can
+   be read at leisure instead of in the second before the page leaves — and
+   a sentence nobody has time to finish is worse than no sentence, because
+   it reads as having missed something.
+
+   So the two surfaces the page already has do the work. THE MAP carries the
+   dive, with the target's own label growing as the camera closes. THE
+   READOUT — fixed height, already naming what was resolved — carries the
+   state, and the row does not jump when the route starts.
+
+   WHAT FAILURE MAY SAY IS BOUNDED. "NO RESPONSE" is a statement about this
+   attempt. "R-83 DOES NOT EXIST" is a statement about the world and is not
+   ours to make: unreachable, asleep, mistyped and never-existed are
+   genuinely indistinguishable from here, and the ambiguity is TRUE.
 
    A LIVE SEALED SECTOR IS NOT A FAILURE CASE — its front door serves an
    entry terminal like any other, so the probe succeeds, the visitor is
@@ -1254,52 +1093,96 @@ paintReadout();
    the door; the door is the gate. */
 var BEAT_MS=1000,PROBE_MS=4000;
 var stage=document.querySelector(".stage");
-var th=document.getElementById("threshold"),thFill=document.getElementById("thFill"),
-    thLab=document.getElementById("thLab"),thDesig=document.getElementById("thDesig"),
-    thAddr=document.getElementById("thAddr"),thTrack=document.getElementById("thTrack"),
-    thNote=document.getElementById("thNote"),thBack=document.getElementById("thBack"),
-    thBrg=document.getElementById("thBrg");
-var thTimer=null,thFailed=false,thWaits=[];
+var route=null,routeTimer=null,routeWaits=[];
 
-function beginThreshold(label,host,hue,aim){
-  thFailed=false;
-  thLab.className="th-lab";thLab.textContent="THRESHOLD";
-  thDesig.textContent=label;
-  /* NO HUE FOR A TYPED ADDRESS. Colouring one because the scan happens to
-     know it would confirm that it knows it — an oracle by decoration. */
-  thDesig.style.color=hue||"var(--silence)";
-  thAddr.textContent=host;
-  thTrack.hidden=false;thFill.style.width="0%";
-  thBack.hidden=true;thBack.textContent="[ RETURN TO SCAN ]";
-  thWaits.forEach(clearTimeout);thWaits.length=0;
-  /* WHAT THE SCAN HAS, SAID IN WORDS. The dive says the same thing in
-     movement and does not run under reduced motion, so this line is what
-     carries it there — and it is the honest half either way: a direction
-     the page derived from the string you typed, and no range, because
-     nothing declared one. A contact on the map needs no such line: the
-     scan knows its place and the map is already showing it. */
-  thBrg.hidden=!aim||aim.kind==="contact";
-  if(aim&&aim.kind==="bearing"){
-    thBrg.innerHTML="BEARING <b>"+("00"+aim.deg).slice(-3)+"&deg;</b> DERIVED &middot; RANGE UNKNOWN &middot; SEARCHING A DIRECTION";
-  }else if(aim&&aim.kind==="none"){
-    thBrg.textContent="NO BEARING · A HOST IS A LOCATION, NOT A DESIGNATION";
-  }
+/* beat    — the contact's own row, action slot reading ROUTING
+   waiting — asked and unanswered, 2.5s after the navigation was requested
+   stop    — still unanswered at 8s, and now abandonable
+   fail    — the probe could not reach it, and nothing was remembered */
+function setPhase(p){if(route){route.phase=p;paintReadout(true);}}
+function routeAct(){
+  if(route.phase==="fail"){return '<button class="tune bad" id="routeBtn" type="button">[ RETRY ]</button>';}
+  if(route.phase==="stop"){return '<button class="tune" id="routeBtn" type="button">[ STOP ]</button>';}
+  return '<button class="tune busy" type="button" disabled>[ '
+    +(route.phase==="waiting"?"WAITING":"ROUTING")+' ]</button>';
+}
+function wireRouteBtn(){
+  var b=document.getElementById("routeBtn");
+  if(!b){return;}
+  b.addEventListener("click",function(){
+    var r=route;
+    if(r.phase==="stop"){
+      /* A REQUESTED NAVIGATION CAN STILL BE CALLED OFF. If the sector takes
+         minutes to hand over a document — a slow host, or a service worker
+         of its own deciding whether to update — the visitor is left holding
+         a page that has said its piece and can do nothing else.
+         window.stop() abandons the pending navigation for real, so this is
+         an exit and not a control that tidies the page while the trip
+         continues. It is not the cancellable timer §06 removed: that one
+         stood between you and a decision you had already made, and this
+         appears only once the far end has failed to answer. */
+      try{window.stop();}catch(e){}
+      clearRoute();return;
+    }
+    clearRoute();                                   /* RETRY */
+    beginRoute(r.label,r.host,r.hue,r.aim,r.c);
+  });
+}
+/* FACTS ON SEPARATE SPANS so a long line wraps inside the fixed height
+   rather than running off under the button — one span is nowrap by rule,
+   and the failure message is the longest string on the page. */
+function statusRow(){
+  var bad=route.phase==="fail";
+  var body=bad
+    ? '<span class="bad">NO RESPONSE</span><span>UNREACHABLE, ASLEEP OR MISTYPED</span>'
+      +'<span>FROM HERE THESE ARE THE SAME</span><span>NOTHING WAS REMEMBERED</span>'
+    : '<span>WAITING FOR <b>'+esc(route.label)+'</b> TO ANSWER</span>'
+      +'<span>THE SCAN HAS DONE ITS PART</span>';
+  return ACT(routeAct())
+    +'<div class="ro-body"><span class="ro-desig" style="color:'
+    +(bad?"var(--silence)":(route.hue||"var(--silence)"))+'">'+esc(route.label)+'</span>'
+    +'<span class="ro-facts">'+body+'<span><b>'+esc(route.host)+'</b></span></span></div>';
+}
+/* A TYPED ADDRESS HAS NO CONTACT to borrow a row from, so it gets its own,
+   and that row is the honest half of the corridor address put into words —
+   which is also what carries it under reduced motion, where the dive does
+   not run at all. NO HUE: colouring a typed designation because the scan
+   happens to know it would confirm that it knows it, an oracle by
+   decoration. */
+function corridorRow(){
+  var a=route.aim;
+  var brg=(a&&a.kind==="bearing")
+    ? '<span>BRG <b class="lit">'+("00"+a.deg).slice(-3)+'&deg;</b> &middot; DERIVED</span>'
+      +'<span>RANGE <b>UNKNOWN</b></span>'
+    : '<span>NO BEARING</span><span>A HOST IS A LOCATION, NOT A DESIGNATION</span>';
+  return ACT(routeAct())
+    +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence)">'+esc(route.label)+'</span>'
+    +'<span class="ro-facts"><span>CORRIDOR ADDRESS</span>'+brg
+    +'<span><b>'+esc(route.host)+'</b></span></span></div>';
+}
+function focusRouteBtn(){var b=document.getElementById("routeBtn");if(b){b.focus();}}
+
+function beginRoute(label,host,hue,aim,c){
+  clearInterval(routeTimer);routeWaits.forEach(clearTimeout);routeWaits.length=0;
+  route={label:label,host:host,hue:hue||null,aim:aim||null,c:c||null,phase:"beat"};
+  stage.classList.add("routing");
+  /* ANNOUNCED ONLY WHILE A ROUTE RUNS. A permanently live readout would
+     read every hover aloud, which is §04's roll call arriving through the
+     accessibility tree instead of through the layout. */
+  readout.setAttribute("aria-live","polite");
   endDive();beginDive(aim);
-  thNote.textContent=lockPref
-    ?"REMEMBERED ON THIS DEVICE · RETURN TO THE SCAN WITH ?scan"
-    :"NOT REMEMBERED · THE NEXT VISIT LANDS ON THE SCAN";
-  th.hidden=false;stage.classList.add("routing");
+  paintReadout(true);
 
   var start=performance.now(),verdict=null;
   var dropProbe=probe(host,function(v){verdict=v;});
-  clearInterval(thTimer);
-  thTimer=setInterval(function(){
-    var p=Math.min(1,(performance.now()-start)/BEAT_MS);
-    thFill.style.width=(p*100).toFixed(1)+"%";
-    if(p<1){return;}
+  routeTimer=setInterval(function(){
+    if(performance.now()-start<BEAT_MS){return;}
     if(verdict===null){return;}              /* beat done, still listening */
-    clearInterval(thTimer);
-    if(verdict==="fail"){failThreshold(label);return;}
+    clearInterval(routeTimer);
+    /* The dive is over the moment the probe says so, so the furniture
+       comes back with it — a failure the visitor has to act on is no time
+       to be holding the controls at a tenth of their contrast. */
+    if(verdict==="fail"){endDive();stage.classList.remove("routing");setPhase("fail");focusRouteBtn();return;}
     /* "timeout" routes too: an inconclusive probe must not be more
        obstructive than no probe at all. */
     if(lockPref){writeStore(STORE_HOST,host);writeStore(STORE_LABEL,label);}
@@ -1319,56 +1202,29 @@ function beginThreshold(label,host,hue,aim){
        forward path still caps the cost at one more Back press instead of a
        trap, which is why the two paths are not the same call. */
     location.assign("https://"+host+"/");
-    /* replace() only ASKS. Until the sector's document commits we are still
-       on this page, and a finished progress bar that then does nothing reads
-       as a hang rather than as a wait on somebody else. The probe answering
-       is not the same as the door opening — a slow sector, or a service
-       worker of its own thinking it over, lands exactly here. */
-    thWaits.push(setTimeout(function(){
-      if(th.hidden){return;}
-      thLab.textContent="ROUTED";
-      thNote.textContent="WAITING FOR "+label+" TO ANSWER · THE SCAN HAS DONE ITS PART";
-    },2500));
-    /* A REQUESTED NAVIGATION CAN STILL BE CALLED OFF. If the sector takes
-       minutes to hand over a document — a slow host, or a service worker of
-       its own deciding whether to update — the visitor is left holding a
-       page that has said its piece and can do nothing else. window.stop()
-       abandons the pending navigation for real, so this is an exit and not a
-       button that merely hides the overlay while the trip continues. It is
-       not the cancellable timer §06 removed: that one stood between you and
-       a decision you had already made, and this one only appears once the
-       far end has failed to answer. */
-    thWaits.push(setTimeout(function(){
-      if(th.hidden){return;}
-      thBack.textContent="[ STOP · RETURN TO THE SCAN ]";
-      thBack.hidden=false;
-    },8000));
+    /* assign() only ASKS. Until the sector's document commits we are still
+       on this page, and a dive that goes on diving into silence reads as a
+       hang rather than as a wait on somebody else. The probe answering is
+       not the same as the door opening — a slow sector, or a service worker
+       of its own thinking it over, lands exactly here. */
+    routeWaits.push(setTimeout(function(){setPhase("waiting");},2500));
+    routeWaits.push(setTimeout(function(){setPhase("stop");},8000));
   },40);
 }
-function failThreshold(label){
-  thFailed=true;
+function clearRoute(){
+  /* The selection SURVIVES, so the row falls back to naming what was tried
+     and TUNE is there to try it again. */
+  clearInterval(routeTimer);routeWaits.forEach(clearTimeout);routeWaits.length=0;
+  route=null;
+  stage.classList.remove("routing");
+  readout.removeAttribute("aria-live");
   endDive();
-  thLab.className="th-lab fail";thLab.textContent="NO RESPONSE";
-  thDesig.textContent=label;thDesig.style.color="var(--silence)";
-  thTrack.hidden=true;
-  thNote.textContent="THE ADDRESS MAY BE UNREACHABLE, ASLEEP OR MISTYPED · FROM HERE THESE ARE THE SAME · NOTHING WAS REMEMBERED";
-  thBack.hidden=false;thBack.focus();
+  paintReadout(true);repaintIfStill();
 }
-function closeThreshold(){
-  /* The selection SURVIVES a failure, so the readout still names what you
-     tried and TUNE is there to try it again. */
-  clearInterval(thTimer);thWaits.forEach(clearTimeout);thWaits.length=0;
-  endDive();
-  th.hidden=true;stage.classList.remove("routing");thFailed=false;repaintIfStill();
-}
-thBack.addEventListener("click",function(){
-  try{window.stop();}catch(e){}          /* abandon a navigation still pending */
-  closeThreshold();
-});
-/* ESC dismisses a FAILURE, not the beat — the beat is not a timer to catch. */
+/* ESC clears a FAILURE, not the beat — the beat is not a timer to catch. */
 document.addEventListener("keydown",function(e){
   if(e.key!=="Escape"){return;}
-  if(!th.hidden){if(thFailed){closeThreshold();}return;}
+  if(route){if(route.phase==="fail"){clearRoute();}return;}
   if(selected){selected=null;hover=null;paintReadout();repaintIfStill();}
 });
 
@@ -1491,7 +1347,7 @@ function submitCorridor(){
     corIn.focus();corIn.select();return;
   }
   selected=null;
-  beginThreshold(r.label,r.host,null,r.aim);
+  beginRoute(r.label,r.host,null,r.aim,null);
 }
 var corNote=document.getElementById("corridorNote"),corSaid=null,corRest=corNote.innerHTML;
 function say(msg){
