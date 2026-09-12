@@ -120,10 +120,13 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    two zoom the instrument rather than the document. */
 #viz{display:block;width:100%;height:100%;touch-action:none}
 .corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
-.c-tl{top:12px;left:12px;border-right:0;border-bottom:0}
-.c-tr{top:12px;right:12px;border-left:0;border-bottom:0}
-.c-bl{bottom:12px;left:12px;border-right:0;border-top:0}
-.c-br{bottom:12px;right:12px;border-left:0;border-top:0}
+/* Pushed out to 8, which moves every corner's content up by 4 without
+   putting a bracket back alongside a label. A frame mark belongs on the
+   edge it is marking. */
+.c-tl{top:8px;left:8px;border-right:0;border-bottom:0}
+.c-tr{top:8px;right:8px;border-left:0;border-bottom:0}
+.c-bl{bottom:8px;left:8px;border-right:0;border-top:0}
+.c-br{bottom:8px;right:8px;border-left:0;border-top:0}
 
 /* THE CONTROLS SIT OVER THE INSTRUMENT'S OWN CORNER, opposite the stage tag.
    A control that covers a contact is the "no clickable pixel" bug wearing a
@@ -146,14 +149,21 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    diagonally off it, and the corner read as two things that missed rather
    than as one thing framed. Both ends now start where the bracket stops. */
 .ctl{position:absolute;right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
-.ctl-lock{top:30px}
-.ctl-view{bottom:30px}
+.ctl-lock{top:26px}
+.ctl-view{bottom:26px}
 /* The magnification, next to the control that undoes it, and only while
    there is one. Dropped below the breakpoint, where the two controls share a
    row that has no width to spare — and where there is no wheel to have
    turned in the first place. */
 .view-mag{display:none;font-size:9px;letter-spacing:.16em;color:var(--txt-3);font-variant-numeric:tabular-nums}
 .view-mag.on{display:block}
+/* LABEL, CONTROL, NOTE — in that order, in both corners. The lock had its
+   text UNDER its buttons while the corridor had its label OVER its field, so
+   the two never lined up however they were aligned: one control sat a label's
+   height lower than the other, and no amount of flex alignment could fix a
+   difference in what the boxes were made of. Same parts, same order, and the
+   two rows land on each other by construction. */
+.ctl-lab{font-size:10px;letter-spacing:.2em;color:var(--txt-2);white-space:nowrap}
 .ctl-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);text-align:right;line-height:1.6}
 /* ABSENT UNTIL THERE IS A VIEW TO RESET. Below the breakpoint the controls
    are in the stage's own flow, where a control that comes and goes could
@@ -168,14 +178,14 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    stage, and the groups become real boxes in the stage's own flow on a
    narrow one. */
 .stage-head,.stage-foot{display:contents}
-.key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.key{position:absolute;left:38px;bottom:26px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 /* THE CORRIDOR ADDRESS TAKES THE TOP-LEFT CORNER. At the foot of the page it
    was the last thing anyone found, under a readout that is 96px of nothing
    at rest — and it is the only route into a sector the scan cannot show, so
    being hard to find is the one thing it could not afford. Up here it is the
    first thing in reading order, and the footer it vacated is gone, which the
    stage gets back. */
-.corridor{position:absolute;top:30px;left:38px;width:min(330px,38%);display:flex;flex-direction:column;gap:7px}
+.corridor{position:absolute;top:26px;left:38px;width:min(330px,38%);display:flex;flex-direction:column;gap:7px}
 .cor-row{display:flex;gap:8px;align-items:stretch}
 /* THE FURNITURE STEPS BACK WHILE THE PAGE IS ROUTING. With no overlay left
    to hold the eye, the dive is the whole event, and a legend and a pair of
@@ -253,7 +263,9 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .cor-in{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;flex:1 1 auto;min-width:0;padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
 .cor-in::placeholder{color:var(--txt-3);letter-spacing:.14em}
 .cor-in:focus{outline:none;border-color:var(--cyan-frame)}
-.cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;transition:color .16s,border-color .16s}
+/* nowrap because the label's brackets ARE the button's shape — broken over
+   two lines it stops reading as a control at all. */
+.cor-go{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;white-space:nowrap;transition:color .16s,border-color .16s}
 .cor-go:hover,.cor-go:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 .cor-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);line-height:1.6}
 /* When it is carrying an answer it is not decoration, so it shows at every
@@ -285,17 +297,24 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   /* 30px top and bottom because the corner brackets run to 29 — the same
      clearance the wide layout gives them, so a bracket never lands on a
      label. */
-  .stage-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;padding:30px 20px 0}
-  .stage-foot{display:flex;flex-direction:column;gap:12px;padding:14px 20px 30px}
+  /* Aligned at the TOP, not the bottom. Two stacks whose parts now match
+     line up from the top down; bottom-aligning them lined up the notes and
+     threw the controls out by however much the notes differed. */
+  .stage-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:11px 16px;padding:26px 20px 0}
+  .stage-foot{display:flex;flex-direction:column;gap:11px;padding:13px 20px 26px}
   .ctl{position:static;top:auto;right:auto;bottom:auto;gap:8px}
   /* The address field takes the row and the lock takes what is left; below
      about 420px there is not room for both and the lock drops under it,
      which is the right order to break in. */
   .corridor{position:static;width:auto;top:auto;left:auto;flex:1 1 200px}
-  /* Left-aligned in the stacked layout, where the group is a row in a
-     left-aligned column rather than a corner hugging the right edge —
-     right-aligning inside it indented the buttons off the margin every
-     other control keeps. */
+  /* The address field takes the slack, so the lock is pushed to the right
+     edge when the two share a row and starts at the left margin when it
+     wraps to its own — which is what flex does for free, and what neither a
+     fixed alignment nor an auto margin manages at both widths.
+
+     Its CONTENTS stay left-aligned either way: the box is as wide as its
+     note, so the block still ends on the right margin, and the label, the
+     buttons and the note all start on one edge instead of stepping. */
   .ctl-lock{flex:0 0 auto;align-items:flex-start}
   .ctl-lock .ctl-note{text-align:left}
   .key{position:static;align-self:flex-start;bottom:auto;left:auto}
@@ -324,7 +343,12 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 @media (max-width:560px){.mark{font-size:12px;letter-spacing:.13em}}
 @media (max-width:700px){
   .ro-desig{font-size:20px}
-  .readout{flex-wrap:wrap;gap:9px;height:176px;align-items:flex-start}
+  /* 156 is what the tallest row this can hold actually measures — the
+     designation, four facts wrapped, and a full-width action. It stays a
+     FIXED height, because a readout that grows re-lays the map out from
+     under the pointer that summoned it; it just stops reserving twenty
+     pixels nothing ever uses. */
+  .readout{flex-wrap:wrap;gap:9px;height:156px;align-items:flex-start}
   .ro-body{flex-wrap:wrap;gap:8px}
   .ro-act{width:100%;order:2}
   .tune{width:100%}
@@ -385,6 +409,7 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
     </div>
 
     <div class="ctl ctl-lock">
+      <span class="ctl-lab">REMEMBERED SECTOR</span>
       <div class="seg" role="group" aria-label="Remembered sector">
         <button type="button" data-lock="1" aria-pressed="false">LOCK</button>
         <button type="button" data-lock="0" aria-pressed="true">NO LOCK</button>
