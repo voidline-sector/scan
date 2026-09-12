@@ -115,7 +115,10 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    another. A plain div has no intrinsic anything, so it takes the space and
    the canvas simply fills it. */
 .viz-wrap{display:block;width:100%;height:100%}
-#viz{display:block;width:100%;height:100%}
+/* touch-action:none hands every gesture on the canvas to the page instead of
+   to the browser's own scroll and pinch. It is what lets one finger pan and
+   two zoom the instrument rather than the document. */
+#viz{display:block;width:100%;height:100%;touch-action:none}
 .corner{position:absolute;width:17px;height:17px;border:1px solid var(--cyan-lo);pointer-events:none}
 .c-tl{top:12px;left:12px;border-right:0;border-bottom:0}
 .c-tr{top:12px;right:12px;border-left:0;border-bottom:0}
@@ -161,9 +164,10 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .reset.on{display:block}
 .reset:hover,.reset:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
 
-/* display:contents so the two keep their own absolute corners on a wide
-   stage, and become one row of the stage's own flow on a narrow one. */
-.stage-foot{display:contents}
+/* display:contents so each child keeps its own absolute corner on a wide
+   stage, and the groups become real boxes in the stage's own flow on a
+   narrow one. */
+.stage-head,.stage-foot{display:contents}
 .key{position:absolute;left:38px;bottom:30px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 /* THE CORRIDOR ADDRESS TAKES THE TOP-LEFT CORNER. At the foot of the page it
    was the last thing anyone found, under a readout that is 96px of nothing
@@ -278,13 +282,26 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 @media (max-width:900px){
   .stage{display:flex;flex-direction:column}
   .viz-wrap{flex:1 1 0;height:auto;min-height:0}
-  .stage-foot{display:flex;flex-direction:column;gap:12px;padding:0 20px 16px}
-  .corridor{position:static;width:auto;top:auto;left:auto;align-self:stretch}
+  /* 30px top and bottom because the corner brackets run to 29 — the same
+     clearance the wide layout gives them, so a bracket never lands on a
+     label. */
+  .stage-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;padding:30px 20px 0}
+  .stage-foot{display:flex;flex-direction:column;gap:12px;padding:14px 20px 30px}
+  .ctl{position:static;top:auto;right:auto;bottom:auto;gap:8px}
+  /* The address field takes the row and the lock takes what is left; below
+     about 420px there is not room for both and the lock drops under it,
+     which is the right order to break in. */
+  .corridor{position:static;width:auto;top:auto;left:auto;flex:1 1 200px}
+  /* Left-aligned in the stacked layout, where the group is a row in a
+     left-aligned column rather than a corner hugging the right edge —
+     right-aligning inside it indented the buttons off the margin every
+     other control keeps. */
+  .ctl-lock{flex:0 0 auto;align-items:flex-start}
+  .ctl-lock .ctl-note{text-align:left}
   .key{position:static;align-self:flex-start;bottom:auto;left:auto}
-  .ctl{position:static;align-self:flex-end;top:auto;right:auto;bottom:auto;gap:8px}
-  /* The two control groups share a row rather than stacking, because two
-     rows of segmented buttons is most of a phone's spare height. */
-  .ctl-view{flex-direction:row-reverse;align-items:center}
+  /* The projection and the magnification share a row: two rows of segmented
+     buttons is most of a phone's spare height. */
+  .ctl-view{align-self:flex-start;flex-direction:row-reverse;align-items:center}
   .view-mag.on{display:none}
   .reset{padding:7px 9px;letter-spacing:.1em}
 }
@@ -292,15 +309,19 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    says something the rest of the page also says by behaving. */
 @media (max-width:1180px){.creed{display:none}}
 @media (max-width:620px){.cor-note:not(.say){display:none}}
-/* Wrapped, the mark hung off one edge and the clock off the other. Centred,
-   the two lines read as one nameplate instead of two things that missed. */
-@media (max-width:560px){
+/* CENTRED BEFORE IT CAN WRAP, NOT AFTER. At 560 the mark also shrinks, so
+   the band just above that threshold was the one width where the bar was
+   wide enough to wrap and still laid out for two ends — the mark hanging off
+   one edge and the clock off the other, on separate lines. Centring from 720
+   covers the whole band either side of the wrap, so the nameplate reads as
+   one object whether it takes one line or two. */
+@media (max-width:720px){
   .bar{justify-content:center;gap:5px 16px;text-align:center}
   .bar-right{margin-left:0;justify-content:center}
-  /* 31 characters at 14px and .18em is wider than a phone. It stays the
-     biggest type in the bar; it just stops being wider than the bar. */
-  .mark{font-size:12px;letter-spacing:.13em}
 }
+/* 31 characters at 14px and .18em is wider than a phone. It stays the
+   biggest type in the bar; it just stops being wider than the bar. */
+@media (max-width:560px){.mark{font-size:12px;letter-spacing:.13em}}
 @media (max-width:700px){
   .ro-desig{font-size:20px}
   .readout{flex-wrap:wrap;gap:9px;height:176px;align-items:flex-start}
@@ -335,15 +356,15 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   </header>
 
   <main class="stage">
-    <div class="viz-wrap"><canvas id="viz"></canvas></div>
-    <span class="corner c-tl"></span><span class="corner c-tr"></span>
-    <span class="corner c-bl"></span><span class="corner c-br"></span>
-
-    <!-- FOUR CORNERS, ONE JOB EACH. Above the breakpoint every one of these
-         is further from the centre than the outermost thing the picture ever
-         draws, so none of them can come to rest on top of a contact; below
-         it they stop overlaying and take the stage's own flow. -->
-    <div class="stage-foot">
+    <!-- FOUR CORNERS ON A WIDE STAGE, TWO GROUPS ON A NARROW ONE, and the
+         split is by what the control is FOR. What you do before looking —
+         type an address, decide what the next visit does — sits above the
+         picture. What you do to the picture you are looking at — the
+         projection, the magnification — sits below it, with the legend that
+         explains what is in it last of all. Stacking every control under the
+         canvas put the address field, which is the only way into a sector the
+         scan cannot show, at the bottom of a phone screen. -->
+    <div class="stage-head">
 
     <!-- NOT A <form>. A form would put the typed address in the URL on
          submit, which is the one thing this field must never do. Enter is
@@ -370,16 +391,13 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       </div>
       <div class="ctl-note" id="ctlNote"></div>
     </div>
-
-    <div class="key">
-      <div class="key-row">
-        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
-        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; TUNABLE
-      </div>
-      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
-      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
     </div>
 
+    <div class="viz-wrap"><canvas id="viz"></canvas></div>
+    <span class="corner c-tl"></span><span class="corner c-tr"></span>
+    <span class="corner c-bl"></span><span class="corner c-br"></span>
+
+    <div class="stage-foot">
     <div class="ctl ctl-view">
       <!-- RESET VIEW belongs with the projection rather than with the lock:
            both of these say what the instrument is currently showing, and
@@ -390,6 +408,15 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
         <button type="button" data-rate="1" aria-pressed="true">LIVE</button>
         <button type="button" data-rate="500" aria-pressed="false">PROJECT &times;500</button>
       </div>
+    </div>
+
+    <div class="key">
+      <div class="key-row">
+        <span class="key-sw"><span class="pip p1"></span><span class="pip p2"></span><span class="pip p3"></span></span>
+        COMMISSIONED &middot; EACH SECTOR ITS OWN COLOUR &middot; TUNABLE
+      </div>
+      <div class="key-row"><span class="key-sw"><span class="key-hollow"></span></span>PROVISIONED &middot; HOLLOW, UNNAMED</div>
+      <div class="key-row"><span class="key-sw"><span class="key-faint"></span></span>UNRESOLVED RETURN &middot; FAINT, UNPLACED</div>
     </div>
     </div>
   </main>
@@ -595,7 +622,12 @@ function R(){return BASE*scale;}
    smooth. */
 function clampPan(){
   if(cam){return;}
-  var lim=BASE*(scale-1)+8;ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));
+  /* ZERO AT ×1. The 8px of slack was a rounding cushion, and it meant the
+     picture could be dragged a few pixels at a magnification with nothing to
+     pan to — which jiggled the instrument and armed RESET VIEW for a view
+     nobody had changed. At ×1 there is exactly one correct position. */
+  var lim=Math.max(0,BASE*(scale-1));
+  ox=Math.max(-lim,Math.min(lim,ox));oy=Math.max(-lim,Math.min(lim,oy));
 }
 
 function angleOf(c){
@@ -687,7 +719,16 @@ function drawStrip(X,Y,cr,t){
    has no duration to be wrong about: it looks the same whether the probe
    answers in 200ms or times out at four seconds, and it decelerates instead
    of arriving. */
-var CAM_HALF=0.42;                      /* seconds to close half the gap */
+var CAM_HALF=0.42;                      /* the dive: seconds to close half the gap */
+/* THE WAY BACK IS NOT THE WAY IN. The dive decorates a wait of unknown
+   length, so it eases on a half-life and has no duration to be wrong about.
+   The return is not decorating anything — it is a control responding — so it
+   gets a short fixed duration and an ease that ARRIVES. The exponential was
+   wrong here twice over: its tail crawled for most of a second, and because
+   an exponential never actually lands it needed a threshold to snap at,
+   which is the small jump at the end. A cubic ease-out reaches the target
+   exactly at the last frame, so there is nothing left to snap. */
+var HOME_MS=300;
 /* THE RANGE THE BEARING DIVE TRAVELS TO IS NOT THE RIM AND NOT PAST IT.
    Out past ring 05 the frame is empty dark, and coming to rest in the void
    reads as having arrived at nothing — an answer, and the wrong one. Ending
@@ -712,11 +753,20 @@ function beginDive(aim){
   else{return;}
   startLoop();
 }
-function endDive(){
-  if(cam&&cam.kind!=="home"){
-    cam={kind:"home",from:{scale:scale,ox:ox,oy:oy},to:userView,k:0,k2:0};
-    startLoop();
-  }
+function goHome(to){
+  cam={kind:"home",from:{scale:scale,ox:ox,oy:oy},to:to,el:0,k:0,k2:0};
+  startLoop();
+}
+function endDive(){if(cam&&cam.kind!=="home"){goHome(userView);}}
+/* THE HAND INTERRUPTS THE WAY BACK. Waiting out an animation to be allowed
+   to touch the thing again is the animation charging rent. A dive still
+   outranks the hand — it is carrying a navigation — but a return is only
+   tidying up, and the moment a wheel turns or a finger lands it hands the
+   transform straight over from wherever it had got to. */
+function takeCamera(){
+  if(!cam){return true;}
+  if(cam.kind!=="home"){return false;}
+  cam=null;return true;
 }
 /* ONE EASED PARAMETER MOVES THE WHOLE CAMERA, and that is the fix for the
    snap this had at the start of every dive. Setting the offset straight
@@ -741,9 +791,10 @@ function stepCamera(dt,t){
   cam.k2+=(1-cam.k2)*(1-Math.pow(0.5,dt/(CAM_HALF*2.4)));
   var f=cam.from,k=cam.k,tScale,tox,toy;
   if(cam.kind==="home"){
-    var to=cam.to;
-    scale=lerp(f.scale,to.scale,k);ox=lerp(f.ox,to.ox,k);oy=lerp(f.oy,to.oy,k);
-    if(k>0.994){scale=to.scale;ox=to.ox;oy=to.oy;cam=null;}
+    cam.el+=dt*1000;
+    var p=Math.min(1,cam.el/HOME_MS),q=1-Math.pow(1-p,3),to=cam.to;
+    scale=lerp(f.scale,to.scale,q);ox=lerp(f.ox,to.ox,q);oy=lerp(f.oy,to.oy,q);
+    if(p>=1){cam=null;}          /* q is exactly 1 here: it has landed */
     return;
   }
   if(cam.kind==="contact"){
@@ -780,8 +831,8 @@ function stepCamera(dt,t){
    a sector. */
 var MIN_SCALE=1,MAX_SCALE=8;
 function markView(){userView={scale:scale,ox:ox,oy:oy};paintView();}
-function zoomAt(px,py,factor){
-  var ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,scale*factor));
+function zoomTo(px,py,target){
+  var ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,target));
   if(ns===scale){return;}
   /* The world point under the pointer, held fixed across the change. */
   var wx=(px-cx())/R(),wy=(py-cy())/R();
@@ -789,17 +840,16 @@ function zoomAt(px,py,factor){
   ox=px-W/2-wx*R();oy=py-H/2-wy*R();
   clampPan();markView();repaintIfStill();
 }
+function zoomAt(px,py,factor){zoomTo(px,py,scale*factor);}
 function resetView(){
   if(scale===1&&ox===0&&oy===0){return;}
-  /* Eased home rather than snapped, and it reuses the dive's own way back,
-     so the one motion on this page that means "returning" looks the same
-     however it was asked for. */
-  cam={kind:"home",from:{scale:scale,ox:ox,oy:oy},to:{scale:1,ox:0,oy:0},k:0,k2:0};
+  /* The same way back a finished route takes, so the one motion on this page
+     that means "returning" looks the same however it was asked for. */
   userView={scale:1,ox:0,oy:0};
-  startLoop();repaintIfStill();
+  goHome(userView);repaintIfStill();
 }
 cv.addEventListener("wheel",function(e){
-  if(cam||REDUCED){return;}
+  if(REDUCED||!takeCamera()){return;}
   e.preventDefault();
   /* deltaMode is 0 in pixels, 1 in lines, 2 in pages, and a trackpad and a
      notched wheel disagree by an order of magnitude — normalise before it
@@ -810,8 +860,10 @@ cv.addEventListener("wheel",function(e){
 },{passive:false});
 
 var drag=null,dragMoved=0;
+/* HELD LEFT BUTTON ONLY, which is also why there is no hover-pan to
+   discover by accident: the picture moves when somebody is holding it. */
 cv.addEventListener("mousedown",function(e){
-  if(cam||REDUCED||e.button!==0){return;}
+  if(REDUCED||e.button!==0||!takeCamera()){return;}
   drag={x:e.clientX,y:e.clientY,ox:ox,oy:oy};dragMoved=0;
 });
 window.addEventListener("mousemove",function(e){
@@ -826,11 +878,61 @@ window.addEventListener("mouseup",function(){drag=null;});
    click is already the confirmation that routes, and a gesture cannot mean
    two things on the same pixel. */
 cv.addEventListener("dblclick",function(e){
-  if(cam){return;}
+  if(cam&&cam.kind!=="home"){return;}
   var r=cv.getBoundingClientRect();
   if(resolveAt(e.clientX-r.left,e.clientY-r.top)){return;}
   resetView();
 });
+/* ── TOUCH ──────────────────────────────────────────────────────────────
+   One finger pans, two pinch, and the pinch is anchored to its own midpoint
+   so the map moves with the fingers rather than toward the middle.
+
+   NOTHING IS PREVENTED ON touchstart. Cancelling that event also cancels the
+   synthetic click the browser fires after a tap, and a tap is how a contact
+   is selected on a touch screen — the one gesture this page cannot afford to
+   break. touch-action:none in the stylesheet already stops the browser
+   scrolling or zooming the page from here, so the only preventDefault needed
+   is on the move. */
+function tDist(t){return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);}
+var touch=null;
+cv.addEventListener("touchstart",function(e){
+  if(REDUCED||!takeCamera()){return;}
+  var r=cv.getBoundingClientRect(),t=e.touches;
+  if(t.length===1){touch={mode:"pan",x:t[0].clientX,y:t[0].clientY,ox:ox,oy:oy};}
+  else if(t.length>=2){
+    touch={mode:"pinch",d:tDist(t),
+           px:(t[0].clientX+t[1].clientX)/2-r.left,
+           py:(t[0].clientY+t[1].clientY)/2-r.top};
+  }
+},{passive:true});
+cv.addEventListener("touchmove",function(e){
+  if(!touch||cam){return;}
+  e.preventDefault();
+  var r=cv.getBoundingClientRect(),t=e.touches;
+  if(touch.mode==="pan"&&t.length===1){
+    ox=touch.ox+(t[0].clientX-touch.x);oy=touch.oy+(t[0].clientY-touch.y);
+    clampPan();markView();repaintIfStill();
+  }else if(touch.mode==="pinch"&&t.length>=2){
+    var d=tDist(t),px=(t[0].clientX+t[1].clientX)/2-r.left,py=(t[0].clientY+t[1].clientY)/2-r.top;
+    /* The midpoint's own travel pans, and the spread zooms about it, so two
+       fingers do both at once the way they do everywhere else. */
+    ox+=px-touch.px;oy+=py-touch.py;
+    touch.px=px;touch.py=py;
+    if(d>0&&touch.d>0){zoomTo(px,py,scale*(d/touch.d));}
+    else{clampPan();markView();repaintIfStill();}
+    touch.d=d;
+  }
+},{passive:false});
+function endTouch(e){
+  var t=e.touches;
+  if(!t.length){touch=null;return;}
+  /* Lifting one finger out of a pinch leaves the other still down, and it
+     should go on panning rather than jumping to wherever it started. */
+  if(t.length===1){touch={mode:"pan",x:t[0].clientX,y:t[0].clientY,ox:ox,oy:oy};}
+}
+cv.addEventListener("touchend",endTouch);
+cv.addEventListener("touchcancel",endTouch);
+
 /* Shown only when there is something to reset, and given its space rather
    than its display, so appearing cannot re-lay the stage out from under the
    pointer on a narrow screen. */
