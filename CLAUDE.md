@@ -97,25 +97,66 @@ Radial. Five concentric city rings around a central void.
   bodies, not sections of one engineered wheel, so the rings shear past each
   other over days.
 
+**THE MARGIN AROUND THE PICTURE IS FOR THE CORNERS**, so a phone does not pay
+it. On a wide stage the four corner blocks overlay the picture and the margin
+is what keeps the outermost thing drawn clear of them; below the breakpoint
+those controls take rows of their own and the canvas has the frame to itself,
+so the radius goes from 0.42 to 0.46 of the shorter side. Not all of it,
+because **the rim ring is not the outermost thing drawn** — an unresolved
+return drifts out to 0.955 and its emission expands another 0.09 past that,
+and the ring labels reach 0.82 out plus half a label's width. Pushed to the
+frame, the emissions clip and `05 · OUTER RIM` hangs off the side.
+
 **No roster.** §04 opens by rejecting a member list with status indicators as a
 roll call, and a permanent list of sectors is that one level up. One readout
 strip names what the pointer found, near-empty at rest. A three-row **key** is
 fine — a legend names the *kinds* and never the sectors.
 
-## The glitch treatment — there isn't one
+## The glitch treatment
 
 **GLITCH IS PER-SURFACE, NOT SHARED.** The obvious rule — *display artifacts
-are shared, image artifacts are not* — was built out in full and then taken
-back out, because the premise underneath it is wrong: there is no house
-display layer that every Voidline surface must wear. Each instrument decides
-for itself, and some of them are not glitchy at all. **This one is clean**,
-and it should stay clean unless something specific earns its place.
+are shared, image artifacts are not* — was built out in full and taken back
+out, because the premise under it is wrong: there is no house display layer
+that every Voidline surface has to wear. Each instrument decides for itself.
+The sector homepages keep all three of theirs, which is right for a surface
+that has a picture to degrade.
 
-The sector homepages keep all three of theirs. Nothing here is a judgement on
-those; they have a picture to degrade and the artifacts are about the feed.
+**THE SCAN KEEPS TWO**, and both are faults of an *instrument* rather than of
+a screen: one in the grid it draws, one in the readout it writes. Neither
+touches a mark, a bearing, or anything a pointer resolves against.
 
-**What was tried, and why each came out** — so none of it is re-tried on the
-strength of the idea alone:
+**HAIRLINE BREAK.** A gap of 14–30° opens in one ring, holds for half a
+second, then spends two more catching, dropping and catching again before it
+holds. Every 5–15 seconds, and the frequency is the point: once a minute
+would be a surprise, and this often is a grid that occasionally drops a line
+— the difference between an event and a texture. It survived because the
+rings belong to the **instrument** rather than to any sector, so a break here
+cannot be misread as a sector doing something, and because it touches no
+type. The fault is shorter than its own shortest interval, so two can never
+overlap.
+
+**READOUT SETTLE.** On a row change, every **value** resolves through a wrong
+glyph or two before landing — the designation, the aperture, the ring, the
+orbit, the bearing — settling from the left over 280ms. **No label ever
+settles.** A readout resolving is the numbers arriving, not the words that
+name them; and because the field names hold still, the shape of the line
+never changes while it happens, only what is written in its slots.
+
+**NOTHING HAPPENS AT REST.** Each rides something that already exists — a
+schedule the grid keeps, an event the readout already had. Neither idles, and
+that is the bar a third would have to clear: a treatment that runs
+continuously has to justify a continuous cost.
+
+**280ms IS THE WHOLE BUDGET** for anything that touches type. This page has a
+legibility doctrine that has been broken once already, and the test a
+treatment has to pass is whether it makes anything harder to read.
+
+**Both hold still under `prefers-reduced-motion`**, with explicit guards
+rather than reliance on the frame loop stopping, because `PROJECT` runs
+frames even when motion is reduced.
+
+**What was tried and came out** — so none of it is re-tried on the strength
+of the idea alone:
 
 - **Scanlines.** Invisible against the ground, exactly as designed, which
   left them landing only on the type and the ring hairlines — the two things
@@ -126,21 +167,22 @@ strength of the idea alone:
   reading as texture. Cost with no effect.
 - **A loss-of-signal blank.** It reads as the page reloading, which is the
   one thing it must never look like — and keeping the console lit through it
-  was not enough to fix that, because a picture that vanishes for a tenth of
-  a second is a picture that vanished.
+  was not enough, because a picture that vanishes for a tenth of a second is
+  a picture that vanished.
 - **Occasional chromatic convergence.** Rare enough and subtle enough to go
   unnoticed over minutes of watching. An effect nobody sees is not subtle,
-  it is absent, and it should either earn attention or not ship.
-- **Contact jitter.** It reads as every sector having a continuous spasm
+  it is absent. **Rate is what killed it, not amplitude** — the lesson that
+  set the hairline break's interval.
+- **Contact jitter.** It read as every sector having a continuous spasm
   rather than as an unstable return, and a mark that never holds still is
   harder to point at even when the model follows it exactly.
 
-**THE ONE RULE WORTH KEEPING FROM ALL OF IT:** if anything ever displaces a
-mark, **it displaces the model**. A pointer resolves against a contact's
-stored centre and never against the drawn pixel, so paint-only movement does
-not look broken — it quietly stops being clickable, which is worse than
-looking broken. Apply the displacement where the centre is written, and the
-mark, its label, its brackets, its emission and the pointer stay one thing.
+**THE ONE RULE FROM ALL OF IT:** if anything ever displaces a mark, **it
+displaces the model**. A pointer resolves against a contact's stored centre
+and never against the drawn pixel, so paint-only movement does not look
+broken — it quietly stops being clickable, which is worse than looking
+broken. Apply the displacement where the centre is written, and the mark, its
+label, its brackets, its emission and the pointer stay one thing.
 
 ## The corridor address
 

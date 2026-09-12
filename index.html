@@ -679,6 +679,22 @@ var rate=1,vClock=Date.now(),lastFrame=performance.now();
 var CORE={state:"core"};
 
 var cv=document.getElementById("viz"),ctx=cv.getContext("2d"),W=0,H=0,BASE=1;
+/* THE MARGIN IS FOR THE CORNERS, AND A PHONE HAS NONE. On a wide stage the
+   four corner blocks overlay the picture and 0.42 is what keeps the
+   outermost thing drawn clear of them. Below the breakpoint those controls
+   take rows of their own and the canvas has the frame to itself, so the same
+   margin is width sitting unused.
+
+   NOT ALL OF IT, THOUGH, and the reason is that the rim ring is NOT the
+   outermost thing drawn. An unresolved return drifts out to 0.955 and its
+   emission expands another 0.09 past that, so the true edge of the picture
+   is about 1.045 of BASE; and the ring labels sit on a spine that reaches
+   0.82 out and then adds half a label's width on top. Pushed to the frame,
+   the emissions would clip and "05 · OUTER RIM" would hang off the side.
+   0.46 spends the margin and keeps about eight pixels of it. */
+var BASE_WIDE=0.42,BASE_NARROW=0.46;
+var mqNarrow=window.matchMedia("(max-width:900px)");
+function baseFrac(){return mqNarrow.matches?BASE_NARROW:BASE_WIDE;}
 /* Cheap enough to call every frame, because it does nothing unless the box
    has actually moved — and resizing the backing store CLEARS the canvas, so
    "does nothing" has to be the common path. */
@@ -689,7 +705,7 @@ function resize(){
   W=w;H=h;
   cv.width=Math.round(W*d);cv.height=Math.round(H*d);
   ctx.setTransform(d,0,0,d,0,0);
-  BASE=Math.min(W,H)*0.42;clampPan();repaintIfStill();
+  BASE=Math.min(W,H)*baseFrac();clampPan();repaintIfStill();
 }
 function cx(){return W/2+ox;}
 function cy(){return H/2+oy;}
@@ -1097,6 +1113,55 @@ function drawBearingRay(X,Y,rad,cr){
   });
 }
 
+/* ── HAIRLINE BREAK ─────────────────────────────────────────────────────
+   The one fault the scan keeps, and it is the quietest of the five that were
+   tried: a gap opens in one ring, holds for half a second, then spends two
+   more catching, dropping and catching again before it holds.
+
+   IT IS THE GRID THAT FAULTS, NOT THE SIGNAL. The rings belong to the
+   instrument rather than to any sector, so a break here cannot be misread as
+   a sector doing something — which is what disqualified the return dropout —
+   and it touches no type, which is what disqualified the scanlines. Nothing
+   the pointer can resolve is drawn by it, so there is no model to disagree
+   with.
+
+   FREQUENT ON PURPOSE. Once a minute would be a surprise; every five to
+   fifteen seconds is a grid that occasionally drops a line, which is the
+   difference between an event and a texture. The fault is shorter than its
+   own shortest interval, so two can never overlap.
+
+   HELD STILL UNDER REDUCED MOTION, and the guard is explicit rather than
+   leaning on the frame loop stopping, because PROJECT runs frames even when
+   motion is reduced. */
+var HAIR_MS=2400,HAIR_FLICK=1900,HAIR_MIN=5000,HAIR_MAX=15000;
+var hairAt=0,hairUntil=0,hairRing=0,hairArc=0,hairSpan=0,hairSeed=1;
+/* Integer mix: allocates nothing, and STEPS rather than sliding, which is
+   what makes the recovery read as catching rather than fading. */
+function nz(seed,step){
+  var h=(seed^Math.imul(step,2654435761))>>>0;
+  h=Math.imul(h^(h>>>15),2246822519);h=Math.imul(h^(h>>>13),3266489917);
+  return (((h^(h>>>16))>>>0)/2147483647.5)-1;
+}
+function stepHairline(now){
+  if(REDUCED){return false;}
+  if(!hairAt&&!hairUntil){hairAt=now+HAIR_MIN+Math.random()*(HAIR_MAX-HAIR_MIN);}
+  if(hairAt&&now>=hairAt&&!hairUntil){
+    hairRing=Math.floor(Math.random()*RINGS.length);
+    hairArc=Math.random()*Math.PI*2;
+    hairSpan=(14+Math.random()*16)*Math.PI/180;
+    hairSeed=(Math.random()*1e9)>>>0;
+    hairUntil=now+HAIR_MS;hairAt=0;
+  }
+  if(hairUntil&&now>hairUntil){hairUntil=0;hairAt=now+HAIR_MIN+Math.random()*(HAIR_MAX-HAIR_MIN);return false;}
+  if(!hairUntil){return false;}
+  var left=hairUntil-now;
+  if(left>HAIR_FLICK){return true;}
+  /* The last stretch is stepped on a ~34ms grid with the odds of staying
+     open falling as it recovers, so the flicker thins out instead of
+     stopping dead. */
+  return ((nz(hairSeed,Math.floor((HAIR_FLICK-left)/34))+1)/2)<(left/HAIR_FLICK);
+}
+
 function draw(now){
   /* THE MEASUREMENT IS CHECKED, NOT TRUSTED. Notifications are the fast path
      and neither is guaranteed: a resize event fires mid-drag and reports a
@@ -1125,9 +1190,14 @@ function draw(now){
     ctx.lineTo(X+Math.cos(a0)*rad*0.96,Y+Math.sin(a0)*rad*0.96);
     ctx.stroke();
   }
+  var broken=stepHairline(now);
   RINGS.forEach(function(rg,i){
-    ctx.beginPath();ctx.arc(X,Y,rad*rg.r,0,Math.PI*2);
     ctx.strokeStyle=i===RINGS.length-1?"rgba(78,232,212,0.15)":"rgba(78,232,212,0.20)";
+    ctx.beginPath();
+    /* Drawn as one arc that stops short of where it started, which is a gap
+       without a second path and without anything being painted over. */
+    if(broken&&i===hairRing){ctx.arc(X,Y,rad*rg.r,hairArc+hairSpan,hairArc+Math.PI*2);}
+    else{ctx.arc(X,Y,rad*rg.r,0,Math.PI*2);}
     ctx.stroke();
   });
 
@@ -1398,6 +1468,67 @@ window.addEventListener("resize",function(){resize();requestAnimationFrame(resiz
 resize();
 
 var readout=document.getElementById("readout"),shownContact;
+
+/* ── READOUT SETTLE ──────────────────────────────────────────
+   The second fault the scan keeps, and the only one that touches type —
+   which is why it is bounded so tightly. It rides an event that already
+   exists, the same rule the routing dive is built on, one surface down:
+   NOTHING HAPPENS AT REST. A row that has not changed does not settle, and
+   the readout is idle most of the time.
+
+   EVERY VALUE SETTLES; NO LABEL DOES. A readout resolving is the numbers
+   arriving, not the words that name them — APERTURE is printed on the
+   instrument and OPEN is what came back down the wire. That split is also
+   what keeps the row legible while it happens: the shape of the line never
+   changes, only what is written in its slots.
+
+   FROM THE LEFT. Each character holds out a little longer than the one
+   before it, so a value resolves the way a readout resolves rather than
+   every character fizzing and stopping at the same instant.
+
+   280ms IS THE WHOLE BUDGET. This page has a legibility doctrine that has
+   been broken once already, and the test a treatment has to pass here is
+   whether it makes anything harder to read. At this duration it does not;
+   at twice it would. */
+var SETTLE_MS=280;
+var GLYPHS="ABCDEFGHJKLMNPQRSTUVWXYZ0123456789—/\\#·";
+var settleNodes=[],settleUntil=0,settleRaf=0;
+function scrambled(str,k){
+  var n=str.length,out="";
+  for(var i=0;i<n;i++){
+    var hold=((n-i)/n)*0.92;
+    out+=(k>=hold&&str[i]!==" ")?GLYPHS[Math.floor(Math.random()*GLYPHS.length)]:str[i];
+  }
+  return out;
+}
+function settleFrame(now){
+  settleRaf=0;
+  if(!settleUntil){return;}
+  if(now>=settleUntil){
+    settleUntil=0;
+    settleNodes.forEach(function(n){n.el.textContent=n.txt;});
+    return;
+  }
+  var k=(settleUntil-now)/SETTLE_MS;
+  settleNodes.forEach(function(n){n.el.textContent=scrambled(n.txt,k);});
+  settleRaf=requestAnimationFrame(settleFrame);
+}
+/* Its own short-lived loop rather than a branch in draw(): it is DOM work,
+   it lasts a quarter of a second at a time, and the canvas loop is not
+   running at all under reduced motion — where this does not run either, but
+   would otherwise have had no frames to hang on. */
+function armSettle(){
+  settleNodes=[];
+  if(REDUCED){settleUntil=0;return;}
+  Array.prototype.forEach.call(readout.querySelectorAll(".ro-desig,.ro-facts b"),function(el){
+    settleNodes.push({el:el,txt:el.textContent});
+  });
+  if(!settleNodes.length){settleUntil=0;return;}
+  settleUntil=performance.now()+SETTLE_MS;
+  if(!settleRaf){settleRaf=requestAnimationFrame(settleFrame);}
+}
+/* One place the row is written, so one place the settle is armed. */
+function render(html){readout.innerHTML=html;armSettle();}
 /* THE ACTION LEADS THE ROW. Pinned right it was the furthest thing on the
    page from the contact that summoned it, and on a narrow screen the facts
    ran underneath it and were lost. First in the flow it is where the eye
@@ -1420,21 +1551,21 @@ function paintReadout(force){
      beat it is still the contact. The moment the navigation has been asked
      for and not answered, the useful thing is no longer the sector's orbit
      but whether anyone is answering — so it becomes a status line. */
-  if(route&&route.phase!=="beat"){readout.innerHTML=statusRow();wireRouteBtn();return;}
-  if(route&&!c){readout.innerHTML=corridorRow();return;}
+  if(route&&route.phase!=="beat"){render(statusRow());wireRouteBtn();return;}
+  if(route&&!c){render(corridorRow());return;}
   if(!c){
-    readout.innerHTML='<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>';
+    render('<div class="ro-idle">NO CONTACT RESOLVED &nbsp;&middot;&nbsp; POINT TO RESOLVE &nbsp;&middot;&nbsp; SELECT TO TUNE</div>');
     return;
   }
   /* Redaction is SELECTIVE and motivated: mass and radius are measurable from
      outside a horizon, so they print plainly. The name is not. */
   if(c.state==="core"){
-    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
+    render(ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
       +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">SINGULARITY</span>'
       +'<span class="ro-facts"><span>DESIGNATION <b>██&nbsp;███</b></span>'
       +'<span>M <b>'+SING_MASS+'</b></span>'
       +'<span>Rs <b>'+SING_RS_KM+'</b></span><span>&asymp; <b>'+SING_RS_AU+'</b></span>'
-      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>';
+      +'<span>NO EMISSION</span><span>OBSERVED BY EFFECT</span></span></div>');
     return;
   }
   /* A bearing is an OBSERVATION, not a meaning, and a ring is a CLAIM. Both
@@ -1445,17 +1576,17 @@ function paintReadout(force){
   var orb=c.ring===null?"":'<span>ORBIT <b>'+fmtPeriod(orbitPeriodMin(c.ring))+'</b></span>';
   var bearing='<span>BRG <b>'+brg+'</b> &middot; OBSERVED</span>';
   if(c.state==="unresolved"){
-    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
+    render(ACT('<button class="tune" type="button" disabled>[ NOT TUNABLE ]</button>')
       +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-hair)">&mdash; &mdash; &mdash;</span>'
       +'<span class="ro-facts"><span>UNRESOLVED RETURN</span><span>EMISSION <b>INTERMITTENT</b></span>'
-      +'<span>RING '+ring+'</span>'+bearing+'</span></div>';
+      +'<span>RING '+ring+'</span>'+bearing+'</span></div>');
     return;
   }
   if(c.state==="provisioned"){
-    readout.innerHTML=ACT('<button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button>')
+    render(ACT('<button class="tune" type="button" disabled>[ AWAITING COMMISSION ]</button>')
       +'<div class="ro-body"><span class="ro-desig" style="color:var(--silence-lo)">&mdash; &mdash; &mdash;</span>'
       +'<span class="ro-facts"><span>PROVISIONED</span><span>NOT COMMISSIONED</span>'
-      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+bearing+'</span></div>';
+      +'<span>DESIGNATION <b>WITHHELD</b></span><span>RING '+ring+'</span>'+orb+bearing+'</span></div>');
     return;
   }
   var own=c.hue||"var(--silence)";
@@ -1463,11 +1594,11 @@ function paintReadout(force){
      changes word: the facts a visitor was reading a moment ago are the same
      facts in the same place, and nothing new is put in front of somebody
      who is about to leave. */
-  readout.innerHTML=ACT(route?routeAct():'<button class="tune" id="tuneBtn" type="button">[ TUNE ]</button>')
+  render(ACT(route?routeAct():'<button class="tune" id="tuneBtn" type="button">[ TUNE ]</button>')
     +'<div class="ro-body"><span class="ro-desig" style="color:'+own+'">'+esc(c.desig)+'</span>'
     +'<span class="ro-facts"><span>COMMISSIONED</span><span>APERTURE <b class="lit">'+esc(c.aperture)+'</b></span>'
     +'<span>RING '+ring+'</span>'+orb+bearing
-    +'<span><b style="color:'+own+'">'+esc(c.addr)+'</b></span></span></div>';
+    +'<span><b style="color:'+own+'">'+esc(c.addr)+'</b></span></span></div>');
   var tb=document.getElementById("tuneBtn");
   if(tb){tb.addEventListener("click",function(){selected=c;beginRoute(c.desig,c.addr,c.hue,{kind:"contact",c:c},c);});}
 }
