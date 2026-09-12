@@ -210,7 +210,11 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    that caused it. Facts run on a single non-wrapping line. */
 .readout{flex:0 0 auto;border-top:1px solid var(--cyan-lo);padding:13px 18px;height:96px;display:flex;align-items:center;gap:20px;background:var(--ground);overflow:hidden}
 .ro-idle{font-size:10.5px;letter-spacing:.17em;color:var(--txt-2)}
-.ro-body{display:flex;align-items:baseline;gap:18px;flex:1 1 auto;min-width:0}
+/* CENTRED, NOT BASELINED. On a baseline the 26px designation hangs off the
+   FIRST line of the facts, so the moment the facts wrapped to two lines the
+   name rode up out of line with the button beside it. Centred, the name, the
+   facts and the action all sit on one middle. */
+.ro-body{display:flex;align-items:center;gap:18px;flex:1 1 auto;min-width:0}
 .ro-desig{font-family:var(--stencil);font-weight:800;font-size:26px;letter-spacing:.04em;line-height:1;white-space:nowrap;flex:0 0 auto}
 /* THE FACTS WRAP INSIDE A HEIGHT THAT DOES NOT. §5's rule is that the readout
    must never resize the stage — a growing one re-lays the map out from under
@@ -260,7 +264,13 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    placeholder at tier 3 — so nothing has to leave the page's type scale to
    say which of the two is the heading. */
 .cor-lab{font-size:10px;letter-spacing:.2em;color:var(--txt-2);white-space:nowrap}
-.cor-in{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;flex:1 1 auto;min-width:0;padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
+/* A FLOOR, NOT A PREFERENCE, and it is what decides the head's layout.
+   Sharing one line with the lock is worth a row of height right up until
+   the field stops being a field — at 412 that row left it 100px wide and
+   the placeholder clipped mid-word. With a minimum on the input the head
+   wraps exactly when it has to: the two share a line while the field can
+   still hold an address, and the lock drops below it when it cannot. */
+.cor-in{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;flex:1 1 auto;min-width:132px;padding:8px 10px;background:rgba(192,202,198,0.04);border:1px solid var(--silence-hair);color:var(--txt);transition:border-color .16s}
 .cor-in::placeholder{color:var(--txt-3);letter-spacing:.14em}
 .cor-in:focus{outline:none;border-color:var(--cyan-frame)}
 /* nowrap because the label's brackets ARE the button's shape — broken over
@@ -299,14 +309,26 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
      label. */
   /* Aligned at the TOP, not the bottom. Two stacks whose parts now match
      line up from the top down; bottom-aligning them lined up the notes and
-     threw the controls out by however much the notes differed. */
-  .stage-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:11px 16px;padding:26px 20px 0}
-  .stage-foot{display:flex;flex-direction:column;gap:11px;padding:13px 20px 26px}
+     threw the controls out by however much the notes differed.
+
+     Below the breakpoint the corner blocks already sit inside the
+     bracket's own span horizontally — there is no diagonal left to keep —
+     so they may as well sit inside it vertically too, and 20 matches the
+     20 of the side padding. */
+  /* space-between, because the address field is capped and can no longer
+     absorb the slack itself — without it the lock sat wherever the field
+     stopped instead of on the margin. One item on a wrapped line still
+     starts at the left, which is what the stacked case wants. */
+  .stage-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:11px 14px;padding:20px 20px 0}
+  .stage-foot{display:flex;flex-direction:column;gap:11px;padding:13px 20px 20px}
   .ctl{position:static;top:auto;right:auto;bottom:auto;gap:8px}
   /* The address field takes the row and the lock takes what is left; below
      about 420px there is not room for both and the lock drops under it,
      which is the right order to break in. */
-  .corridor{position:static;width:auto;top:auto;left:auto;flex:1 1 200px}
+  /* Capped, because a field stretched across a tablet is not a more usable
+     field — it is the same field with a long empty tail, and the row reads
+     better with the two groups at a comparable weight. */
+  .corridor{position:static;width:auto;max-width:440px;top:auto;left:auto;flex:1 1 200px}
   /* The address field takes the slack, so the lock is pushed to the right
      edge when the two share a row and starts at the left margin when it
      wraps to its own — which is what flex does for free, and what neither a
@@ -323,7 +345,29 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
   .ctl-view{align-self:flex-start;flex-direction:row-reverse;align-items:center}
   .view-mag.on{display:none}
   .reset{padding:7px 9px;letter-spacing:.1em}
+  /* A tighter legend. It is three lines of explanation under a picture that
+     wants the height more than the explanation does. */
+  .key{gap:6px}
+  .key-row{font-size:9px;letter-spacing:.14em}
 }
+/* THE FOOT KEEPS ITS TWO CORNERS WHILE THERE IS WIDTH FOR THEM. Stacking the
+   projection above the legend is a phone arrangement, and it was arriving at
+   900px on screens with room to spare for both. Legend left, controls right,
+   on one line — which is the wide layout's bottom edge, flattened rather
+   than abandoned. */
+@media (min-width:620px) and (max-width:900px){
+  .stage-foot{flex-direction:row;align-items:flex-end;justify-content:space-between;gap:16px}
+  .key{order:1}
+  .ctl-view{order:2;align-self:flex-end}
+  /* The standing note is the first thing to go when the row gets tight: it
+     restates what the lock's own two words already say. */
+  .ctl-lock .ctl-note{display:block}
+}
+/* On a phone the lock's note goes. NEXT VISIT LANDS ON THE SCAN is a
+   sentence about a control whose two buttons are labelled LOCK and NO LOCK
+   and whose current state is lit — it is the one line here that is spending
+   a row to repeat something already on screen. */
+@media (max-width:620px){.ctl-lock .ctl-note{display:none}}
 /* The creed is the first thing to go: it is the only text on the page that
    says something the rest of the page also says by behaving. */
 @media (max-width:1180px){.creed{display:none}}
@@ -341,17 +385,29 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 /* 31 characters at 14px and .18em is wider than a phone. It stays the
    biggest type in the bar; it just stops being wider than the bar. */
 @media (max-width:560px){.mark{font-size:12px;letter-spacing:.13em}}
+/* TWO ROWS, NOT THREE. The action had a row of its own at the bottom and the
+   designation had one at the top, which cost a whole line to say two things
+   that belong together — and put the button furthest from the name it acts
+   on, which is the arrangement the wide readout was fixed for in the first
+   place. The action leads and the designation sits beside it, exactly as it
+   does on a wide stage; the facts take the full width underneath.
+
+   display:contents on the body so its two children become cells of the same
+   grid — the facts cannot span the whole row from inside a box that only
+   occupies the second column.
+
+   STILL A FIXED HEIGHT, because a readout that grows re-lays the map out
+   from under the pointer that summoned it. 124 is what the tallest row
+   measures: the action, the designation, and six facts wrapped to three
+   lines at a phone's width. */
 @media (max-width:700px){
-  .ro-desig{font-size:20px}
-  /* 156 is what the tallest row this can hold actually measures — the
-     designation, four facts wrapped, and a full-width action. It stays a
-     FIXED height, because a readout that grows re-lays the map out from
-     under the pointer that summoned it; it just stops reserving twenty
-     pixels nothing ever uses. */
-  .readout{flex-wrap:wrap;gap:9px;height:156px;align-items:flex-start}
-  .ro-body{flex-wrap:wrap;gap:8px}
-  .ro-act{width:100%;order:2}
-  .tune{width:100%}
+  .readout{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
+           row-gap:7px;column-gap:12px;height:124px}
+  .ro-body{display:contents}
+  .ro-act{grid-column:1;grid-row:1}
+  .ro-desig{grid-column:2;grid-row:1;font-size:20px}
+  .ro-facts{grid-column:1/-1;grid-row:2}
+  .ro-idle{grid-column:1/-1}
 }
 /* THE LEGEND IS THE FIRST FURNITURE TO GO on a short screen, and it can:
    it names the three KINDS, and all three are on the stage above it wearing
