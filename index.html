@@ -1133,8 +1133,20 @@ function drawBearingRay(X,Y,rad,cr){
    HELD STILL UNDER REDUCED MOTION, and the guard is explicit rather than
    leaning on the frame loop stopping, because PROJECT runs frames even when
    motion is reduced. */
+/* TWO OF THEM, ON INDEPENDENT TIMERS. One break every five to fifteen
+   seconds is something you have to be looking for. Two halves the wait
+   without making either of them louder, which is the right way to buy
+   visibility on a surface whose whole point is that nothing shouts — the
+   alternative, one break at twice the size or twice the length, would have
+   made the fault an event again.
+
+   THEY NEVER SHARE A RING. A firing fault picks one no other fault is
+   currently holding, so two breaks are always two breaks in two places, and
+   a ring never has to reconcile two gaps in one arc. */
+var HAIR_COUNT=2;
 var HAIR_MS=2400,HAIR_FLICK=1900,HAIR_MIN=5000,HAIR_MAX=15000;
-var hairAt=0,hairUntil=0,hairRing=0,hairArc=0,hairSpan=0,hairSeed=1;
+var hairs=[],hairGap=[];
+for(var hI=0;hI<HAIR_COUNT;hI++){hairs.push({at:0,until:0,ring:0,arc:0,span:0,seed:1});}
 /* Integer mix: allocates nothing, and STEPS rather than sliding, which is
    what makes the recovery read as catching rather than fading. */
 function nz(seed,step){
@@ -1142,24 +1154,37 @@ function nz(seed,step){
   h=Math.imul(h^(h>>>15),2246822519);h=Math.imul(h^(h>>>13),3266489917);
   return (((h^(h>>>16))>>>0)/2147483647.5)-1;
 }
-function stepHairline(now){
-  if(REDUCED){return false;}
-  if(!hairAt&&!hairUntil){hairAt=now+HAIR_MIN+Math.random()*(HAIR_MAX-HAIR_MIN);}
-  if(hairAt&&now>=hairAt&&!hairUntil){
-    hairRing=Math.floor(Math.random()*RINGS.length);
-    hairArc=Math.random()*Math.PI*2;
-    hairSpan=(14+Math.random()*16)*Math.PI/180;
-    hairSeed=(Math.random()*1e9)>>>0;
-    hairUntil=now+HAIR_MS;hairAt=0;
-  }
-  if(hairUntil&&now>hairUntil){hairUntil=0;hairAt=now+HAIR_MIN+Math.random()*(HAIR_MAX-HAIR_MIN);return false;}
-  if(!hairUntil){return false;}
-  var left=hairUntil-now;
-  if(left>HAIR_FLICK){return true;}
-  /* The last stretch is stepped on a ~34ms grid with the odds of staying
-     open falling as it recovers, so the flicker thins out instead of
-     stopping dead. */
-  return ((nz(hairSeed,Math.floor((HAIR_FLICK-left)/34))+1)/2)<(left/HAIR_FLICK);
+function hairWait(now){return now+HAIR_MIN+Math.random()*(HAIR_MAX-HAIR_MIN);}
+/* Leaves hairGap holding, by ring index, the gap that ring is currently
+   showing — and nothing at all for the rings that are whole. */
+function stepHairlines(now){
+  hairGap.length=0;
+  if(REDUCED){return;}
+  hairs.forEach(function(f){
+    if(!f.at&&!f.until){f.at=hairWait(now);}
+    if(f.at&&now>=f.at&&!f.until){
+      var free=[];
+      RINGS.forEach(function(rg,i){
+        var held=hairs.some(function(o){return o!==f&&o.until&&o.ring===i;});
+        if(!held){free.push(i);}
+      });
+      if(!free.length){for(var i=0;i<RINGS.length;i++){free.push(i);}}
+      f.ring=free[Math.floor(Math.random()*free.length)];
+      f.arc=Math.random()*Math.PI*2;
+      f.span=(14+Math.random()*16)*Math.PI/180;
+      f.seed=(Math.random()*1e9)>>>0;
+      f.until=now+HAIR_MS;f.at=0;
+    }
+    if(f.until&&now>f.until){f.until=0;f.at=hairWait(now);return;}
+    if(!f.until){return;}
+    var left=f.until-now,open;
+    if(left>HAIR_FLICK){open=true;}
+    /* The last stretch is stepped on a ~34ms grid with the odds of staying
+       open falling as it recovers, so the flicker thins out instead of
+       stopping dead. */
+    else{open=((nz(f.seed,Math.floor((HAIR_FLICK-left)/34))+1)/2)<(left/HAIR_FLICK);}
+    if(open){hairGap[f.ring]={arc:f.arc,span:f.span};}
+  });
 }
 
 function draw(now){
@@ -1190,13 +1215,21 @@ function draw(now){
     ctx.lineTo(X+Math.cos(a0)*rad*0.96,Y+Math.sin(a0)*rad*0.96);
     ctx.stroke();
   }
-  var broken=stepHairline(now);
+  /* THE LANES CARRY THE AXIS, so they are no longer at a hairline's value.
+     0.20 is the border token — right for a rule between two facts, and too
+     quiet for the five circles that ARE the picture's one meaningful axis.
+     The spokes stay at 0.07: they are bearing furniture, and the hierarchy
+     between the two only works while one of them is clearly subordinate.
+     A brighter lane also makes a break in it cheaper to notice, which is the
+     same thing the second fault was bought for. */
+  stepHairlines(now);
   RINGS.forEach(function(rg,i){
-    ctx.strokeStyle=i===RINGS.length-1?"rgba(78,232,212,0.15)":"rgba(78,232,212,0.20)";
+    ctx.strokeStyle=i===RINGS.length-1?"rgba(78,232,212,0.22)":"rgba(78,232,212,0.30)";
+    var g=hairGap[i];
     ctx.beginPath();
     /* Drawn as one arc that stops short of where it started, which is a gap
        without a second path and without anything being painted over. */
-    if(broken&&i===hairRing){ctx.arc(X,Y,rad*rg.r,hairArc+hairSpan,hairArc+Math.PI*2);}
+    if(g){ctx.arc(X,Y,rad*rg.r,g.arc+g.span,g.arc+Math.PI*2);}
     else{ctx.arc(X,Y,rad*rg.r,0,Math.PI*2);}
     ctx.stroke();
   });
