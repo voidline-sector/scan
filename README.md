@@ -63,4 +63,9 @@ they are not tried again. Read it before changing how the scan behaves.
 
 ## Licence
 
-Not yet declared.
+Copyright © Voidline Systems. All rights reserved.
+
+This repository is public so the page can be served from it and so the
+reasoning behind it can be read. That is not a grant: no permission is given
+to copy, modify or redistribute the code, the copy, or the Voidline name and
+setting. If you want to do something with it, ask.
