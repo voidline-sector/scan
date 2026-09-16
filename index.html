@@ -29,7 +29,9 @@
    the lock overruling a navigation the visitor made by hand — so the
    forward stands down for a back/forward entry and Forward still returns
    them. Restored from the back/forward cache this script does not run at
-   all, which is the same answer arrived at for free.
+   all, which is the same answer arrived at for free — but only for the
+   FORWARD. A thawed document is still mid-route and cleans that up on
+   `pageshow`; see the route.
 
    AND NEVER TO OURSELVES. `uplink` is a designation like any other and it
    resolves to this page; stored, it would make the scan forward to the scan
@@ -1795,6 +1797,38 @@ function clearRoute(){
   endDive();
   paintReadout(true);repaintIfStill();
 }
+/* A BACK PRESS LANDS ON A LIVE PAGE. The head script stands down for a
+   back/forward entry, and out of the back/forward cache it does not run at
+   all — but that only settles where the visitor goes NEXT. Out of the cache
+   this document is not re-parsed, it is THAWED: still mid-route, because the
+   route was still running when the sector's document committed. The camera
+   is still held at the end of its dive, `routing` still has the furniture at
+   a tenth of its contrast, every click still falls through the beat's guard,
+   and the two timers the route left pending resume and put STOP on the row a
+   few seconds later — the only live control on a page that has otherwise
+   stopped answering. The visitor pressed Back to come back to the scan and
+   got the frozen last frame of leaving it.
+
+   It reproduces only over http(s): a file:// document is not eligible for the
+   cache, so it is re-parsed on Back and arrives clean.
+
+   The route is therefore torn down on the way IN, and the camera takes the
+   same way home STOP and RESET VIEW take — the thawed frame is already at
+   the end of the dive, so the return reads as backing out of the sector,
+   which is what Back was. The frame clock is re-read first: the gap since
+   the freeze is capped at a tenth of a second per frame, and a tenth spent
+   in one frame is most of a 300ms ease-out, which is a snap with extra
+   steps. The pointer is stale too — it has not moved since a click at
+   another magnification — so it is stood down the way leaving the canvas
+   stands it down, and the row falls back to naming what was tried.
+
+   `persisted` only: a fresh load has no state to clean up. */
+window.addEventListener("pageshow",function(e){
+  if(!e.persisted){return;}
+  lastFrame=performance.now();
+  mx=-9999;my=-9999;hover=null;
+  if(route){clearRoute();}else{paintReadout(true);}
+});
 /* ESC clears a FAILURE, not the beat — the beat is not a timer to catch. */
 document.addEventListener("keydown",function(e){
   if(e.key!=="Escape"){return;}
