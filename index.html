@@ -91,7 +91,32 @@
 body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mono);-webkit-font-smoothing:antialiased}
 .frame{height:100svh;min-height:660px;display:flex;flex-direction:column;background:var(--ground);position:relative}
 
-.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto}
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--cyan-lo);flex:0 0 auto;container-type:inline-size}
+/* THE BAR IS THE TITLE BAR WHEN A HOST DRAWS WINDOW CONTROLS OVER THE PAGE.
+   A desktop host using Window Controls Overlay paints its own buttons over
+   one end of the top band and publishes what is left of the band as the
+   titlebar-area env() variables. So the bar keeps its content inside that
+   band, takes the band's height, and is what the window is dragged by.
+   NOTHING HERE ASKS WHAT THE HOST IS: in a browser the variables are unset,
+   every fallback below resolves to plain 14px 18px, and nothing changes.
+
+   The vertical padding is 14px less the band's height, floored at zero, so
+   it gives way entirely whenever there is a band; the min-height then
+   centres the line on the host's buttons and puts the border on the first
+   row below them, where they cannot paint over it. The reservation on each
+   side is whatever the band leaves uncovered there — the controls' width on
+   whichever side the host puts them. 100% and not 100vw: on a short window
+   the page scrolls, vw includes the scrollbar the bar does not, and the
+   reservation grew by its width — enough to wrap the bar at its narrowest.
+
+   Nothing in the bar is interactive. Anything that becomes so needs
+   app-region:no-drag, or the drag region swallows its clicks. */
+.bar{padding:max(0px,14px - env(titlebar-area-height,0px))
+             calc(18px + 100% - env(titlebar-area-x,0px) - env(titlebar-area-width,100%))
+             max(0px,14px - env(titlebar-area-height,0px))
+             calc(18px + env(titlebar-area-x,0px));
+     min-height:calc(env(titlebar-area-height,0px) + 1px);
+     -webkit-app-region:drag;app-region:drag}
 /* A NAMEPLATE, NOT A LABEL. At 11px this read as one more piece of the
    instrument's small print; it is the only thing on the page that names the
    page, and it is allowed to be the largest type in the bar. */
@@ -101,8 +126,17 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    and it is the flexible one so the two ends keep their own widths. It is
    dropped rather than wrapped where it will not fit — a nameplate that grew
    a second row would push the stage down at exactly the widths with least
-   height to give. */
-.creed{flex:1 1 auto;min-width:0;text-align:center;font-size:9.5px;letter-spacing:.17em;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+   height to give.
+
+   BASIS ZERO, so it never decides where the bar wraps. At auto the whole
+   sentence counted toward the line, and a bar with room for a shortened
+   creed broke onto two rows instead — for 7px above the point where the
+   creed returns, and for 90px while PROJECTING widened the clock — which
+   grew the bar and re-laid the stage, in the second case under the control
+   that had just been pressed.
+   It still takes all the room there is, so where the sentence fits nothing
+   has moved. */
+.creed{flex:1 1 0px;min-width:0;text-align:center;font-size:9.5px;letter-spacing:.17em;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .meta{font-size:11px;letter-spacing:.14em;color:var(--txt-2);font-variant-numeric:tabular-nums}
 .live{font-size:11px;letter-spacing:.14em;color:var(--cyan);display:flex;align-items:center;gap:6px}
@@ -371,8 +405,12 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
    a row to repeat something already on screen. */
 @media (max-width:620px){.ctl-lock .ctl-note{display:none}}
 /* The creed is the first thing to go: it is the only text on the page that
-   says something the rest of the page also says by behaving. */
-@media (max-width:1180px){.creed{display:none}}
+   says something the rest of the page also says by behaving. ASKED OF THE
+   BAR, NOT THE VIEWPORT, because a host's window controls take width the
+   viewport still counts — 1144 is what the bar has at a 1180 viewport once
+   its own padding is out, so a browser drops it exactly where it always
+   did. */
+@container (max-width:1144px){.creed{display:none}}
 @media (max-width:620px){.cor-note:not(.say){display:none}}
 /* CENTRED BEFORE IT CAN WRAP, NOT AFTER. At 560 the mark also shrinks, so
    the band just above that threshold was the one width where the bar was

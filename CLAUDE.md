@@ -374,6 +374,24 @@ orbits, emissions and strip all hold still, and everything stays legible.
 type at 0.2 alpha is unreadable. Keep them separate — collapsing them shipped a
 page nobody could read.
 
+## A host's window controls
+
+**THE HEADER IS THE TITLE BAR WHEN A HOST DRAWS WINDOW CONTROLS OVER THE
+PAGE.** A desktop host using Window Controls Overlay paints its buttons over
+one end of the top band and publishes the rest of the band as the
+`env(titlebar-area-*)` variables. The bar keeps its content inside that band,
+takes its height, and is what the window is dragged by. Every value falls back
+to the browser layout, so a browser renders exactly what it always did.
+
+- **Never detect the host.** No user-agent test and no host-specific code —
+  the variables are the whole interface. Nor
+  `(display-mode: window-controls-overlay)`: it does not match in every host
+  that publishes the variables.
+- **The creed's drop point is a container query on the bar**, not a media
+  query, because the controls take width the viewport still counts.
+- **Anything interactive added to the header needs `app-region: no-drag`**,
+  or the drag region swallows its clicks.
+
 ## Deploy
 
 GitHub Pages, from the default branch, with a `CNAME`. There is no build, so
