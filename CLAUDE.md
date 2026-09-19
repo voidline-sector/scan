@@ -392,6 +392,47 @@ to the browser layout, so a browser renders exactly what it always did.
 - **Anything interactive added to the header needs `app-region: no-drag`**,
   or the drag region swallows its clicks.
 
+## What R-77 left behind — dated, and it can come out
+
+Until the address moved, this hostname served R-77, and browsers keep what
+an origin wrote after the origin changes hands. Two pieces clean that up.
+Both name R-77, which the scan otherwise never does — a dated exception,
+not a precedent: the old origin was R-77's, so its leftovers are R-77's.
+Both can come out once they have had time to reach everyone.
+
+**`sw.js` IS A RETIREMENT WORKER, AND THE PAGE NEVER REGISTERS IT.** It
+replaces R-77's old worker in browsers that still hold one here, through the
+browser's own update check, and is inert everywhere else. It is not part of
+the page, so it does not count against "one HTML file".
+
+- **No `fetch` handler, ever.** With none, the worker is skipped for every
+  request the scan makes.
+- On activate: unsubscribe push (the sector notices on its next send and
+  drops the device itself), delete every cache and the old message-history
+  database, then show **one** notification — only to someone who had RELAY
+  on — that opens R-77's `/key`.
+- **Unregister only once nothing is left to click**: on the click, or on a
+  dismissal. Unregistering first leaves the click with no handler.
+- **NEVER AWAIT `showNotification` INSIDE `activate`.** Chrome holds it until
+  activation finishes, and activation is waiting on that promise: the worker
+  sits in `activating` forever and nothing is shown. The first draft did
+  exactly this, and only a real install of R-77's worker caught it.
+- Verify changes in a profile that **holds R-77's old worker** — install the
+  real built one on a local origin, then swap this in. A fresh profile
+  proves nothing, because nothing ever registers this file there.
+
+**THE PAGE SWEEPS EVERY `vl-` AND `vl_` localStorage KEY**, which are all
+R-77's, and the old message-history database (the desktop shell kept one and
+never had a worker). The scan's own keys live under `voidline.scan.` —
+**never give a scan key a `vl` prefix**, or the sweep deletes it every load.
+
+**`vl-carried-key` IS NEVER SWEPT.** It is somebody's actual key, kept there
+by their own opt-in, and it may be the last copy: a sector stores a hash and
+can never reproduce one. The page offers two things — save it as a key file,
+forget it (two presses) — and does nothing else with it: never shown, never
+sent, never removed unless the person says so. The offer stands for as long
+as the key does.
+
 ## Deploy
 
 GitHub Pages, from the default branch, with a `CNAME`. There is no build, so

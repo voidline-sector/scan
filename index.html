@@ -323,6 +323,23 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
 .seg button[aria-pressed="true"]{background:var(--cyan-lo);color:var(--cyan)}
 .seg button:focus-visible{outline:1px solid var(--cyan-frame);outline-offset:-1px}
 
+/* A KEY R-77 LEFT ON THIS TERMINAL. A row of the frame's own and not a
+   corner or an overlay: it is not the instrument talking, it is somebody's
+   possession, and it has to be found by a person who believes it is gone.
+   It changes the stage's height twice at most — appearing on load, leaving
+   on FORGET — and the pointer that makes it leave is on the strip, never on
+   the map. Greys, because nothing is live and nothing is wrong; red only
+   once FORGET is armed. */
+.keep{flex:0 0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:11px 18px;border-bottom:1px solid var(--cyan-lo);background:var(--ground)}
+.keep-say{display:flex;flex-direction:column;gap:4px;flex:1 1 320px;min-width:0}
+.keep-lab{font-size:10px;letter-spacing:.2em;color:var(--txt-2)}
+.keep-lab b{font-weight:500;color:var(--silence)}
+.keep-note{font-size:9px;letter-spacing:.14em;color:var(--txt-3);line-height:1.6}
+.keep-act{display:flex;gap:8px;flex-wrap:wrap}
+.keep-btn{font-family:var(--mono);font-size:10px;letter-spacing:.16em;padding:8px 13px;background:none;border:1px solid var(--silence-hair);color:var(--txt-2);cursor:pointer;white-space:nowrap;transition:color .16s,border-color .16s}
+.keep-btn:hover,.keep-btn:focus-visible{color:var(--cyan);border-color:var(--cyan-frame);outline:none}
+.keep-btn.arm,.keep-btn.arm:hover,.keep-btn.arm:focus-visible{color:var(--red);border-color:var(--red)}
+
 /* The canvas holds itself still in script; this is the one animation CSS owns. */
 @media (prefers-reduced-motion: reduce){.live i{animation:none}}
 
@@ -474,6 +491,20 @@ body{margin:0;background:var(--ground);color:var(--silence);font-family:var(--mo
       <span class="live"><i></i><span id="statusWord">LISTENING</span></span>
     </div>
   </header>
+
+  <!-- A KEY R-77 LEFT HERE. Present only on a terminal that kept one; see
+       the script. Two offers and nothing else — the key is never shown,
+       never sent, and never removed except by the person pressing FORGET. -->
+  <div class="keep" id="keep" hidden>
+    <div class="keep-say">
+      <span class="keep-lab">A KEY RESTS ON THIS TERMINAL &middot; <b id="keepWho"></b></span>
+      <span class="keep-note" id="keepNote"></span>
+    </div>
+    <div class="keep-act">
+      <button class="keep-btn" id="keepSave" type="button">[ SAVE AS KEY FILE ]</button>
+      <button class="keep-btn" id="keepForget" type="button">[ FORGET IT ]</button>
+    </div>
+  </div>
 
   <main class="stage">
     <!-- FOUR CORNERS ON A WIDE STAGE, TWO GROUPS ON A NARROW ONE, and the
@@ -2042,6 +2073,101 @@ document.querySelectorAll("[data-lock]").forEach(function(b){
   });
 });
 paintLock();
+
+/* ── WHAT R-77 LEFT ON THIS ORIGIN ──────────────────────────────────────
+   Until the address moved, this hostname served R-77, and a browser keeps
+   what an origin wrote after the origin changes hands. The retirement
+   worker (sw.js) clears what the old WORKER held; this clears what only a
+   page can reach — localStorage — plus the old app's message history,
+   because the desktop shell kept that history too and never had a worker to
+   clear it. It runs only once the head script has declined to forward, so
+   none of it costs the forward anything.
+
+   EVERY `vl-` AND `vl_` KEY IS R-77's: read cursors, a typed room name,
+   per-participant volumes, cached link cards, emoji recents, and the rest.
+   The scan's own keys live under `voidline.scan.` and must never take
+   either prefix, or this deletes them on every load.
+
+   EXCEPT ONE, AND IT IS NEVER SWEPT. `vl-carried-key` is not a trace, it is
+   a POSSESSION: the actual key, kept on this terminal only because its
+   holder asked, and possibly the last copy anywhere — a sector stores a
+   hash of a key and never the key, so no sector can reproduce one. R-77 can
+   no longer read it and this page can, so its holder is owed two offers and
+   nothing else: save it as a key file, or forget it. It is never shown,
+   never sent, and never removed except by the person pressing FORGET. The
+   offer stands for as long as the key does, because the page does not get
+   to decide the person has seen enough of it. */
+var CARRIED="vl-carried-key";
+(function(){
+  var ks=[];
+  try{for(var i=0;i<localStorage.length;i++){ks.push(localStorage.key(i));}}catch(e){}
+  ks.forEach(function(k){if(k!==CARRIED&&/^vl[-_]/.test(k)){dropStore(k);}});
+  try{indexedDB.deleteDatabase("vl-chat-history");}catch(e){}
+})();
+/* Read fresh at each use rather than held, so the key sits in this page's
+   memory only for the moment a file is being written from it. The shape and
+   the check are R-77's own, so what R-77 would have refused is not offered. */
+function carriedKey(){
+  try{
+    var p=JSON.parse(readStore(CARRIED)||"null");
+    if(!p||typeof p.vk!=="string"||!/^[A-Za-z0-9+\/=_-]{16,256}$/.test(p.vk)){return null;}
+    return {vk:p.vk,label:typeof p.label==="string"&&p.label?p.label:"inhabitant"};
+  }catch(e){return null;}
+}
+/* R-77's own key file, line for line, so R-77 reads it like any other. No
+   ROLE line: the stash never recorded one, and a file that claimed one
+   would be inventing it. Only the VK line is read on the way in. */
+function keyFileOf(k){
+  var rule="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+  return ["╔══════════════════════════════════════════╗",
+          "║   VOIDLINE SYSTEMS  //  SECTOR KEY FILE  ║",
+          "╚══════════════════════════════════════════╝",
+          "","VERSION      : 1","ORIGIN SECTOR: R77","ISSUED TO    : "+k.label,
+          "","VK:"+k.vk,"",rule,
+          "This key grants access to authorized sectors.",
+          "Do not distribute. Do not transmit in clear.",
+          rule,""].join("\n");
+}
+(function(){
+  var held=carriedKey();
+  if(!held){return;}
+  var keep=document.getElementById("keep"),note=document.getElementById("keepNote"),
+      save=document.getElementById("keepSave"),forget=document.getElementById("keepForget");
+  var said="R-77 KEPT IT HERE BEFORE IT MOVED, AND CAN NO LONGER READ IT · NOTHING IS DONE WITH IT UNTIL YOU CHOOSE";
+  var armed=null;
+  document.getElementById("keepWho").textContent=held.label.toUpperCase();
+  held=null;
+  note.textContent=said;
+  function leave(){keep.hidden=true;resize();}
+  function disarm(){
+    clearTimeout(armed);armed=null;
+    forget.classList.remove("arm");forget.textContent="[ FORGET IT ]";note.textContent=said;
+  }
+  save.addEventListener("click",function(){
+    var k=carriedKey();
+    if(!k){leave();return;}              /* forgotten in another tab meanwhile */
+    var name=k.label.toLowerCase()+"-r77.voidline.key";
+    var url=URL.createObjectURL(new Blob([keyFileOf(k)],{type:"text/plain"}));
+    var a=document.createElement("a");
+    a.href=url;a.download=name;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    said="SAVED AS "+name+" · IT STAYS HERE TOO UNTIL YOU FORGET IT";
+    disarm();
+  });
+  /* TWO PRESSES. This may be the last copy of somebody's key, and one
+     misplaced tap on a phone should not be able to end it. */
+  forget.addEventListener("click",function(){
+    if(!armed){
+      forget.classList.add("arm");forget.textContent="[ FORGET · CONFIRM ]";
+      note.textContent="NO SECTOR CAN REPRODUCE A LOST KEY · PRESS AGAIN TO FORGET IT FOR GOOD";
+      armed=setTimeout(disarm,6000);
+      return;
+    }
+    disarm();dropStore(CARRIED);leave();
+  });
+  keep.hidden=false;resize();
+})();
 
 /* ── PROJECTION, NOT SPEED ──────────────────────────────────────────────
    The city is not spinning faster — the instrument is showing where things
