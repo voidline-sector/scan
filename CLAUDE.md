@@ -395,10 +395,12 @@ to the browser layout, so a browser renders exactly what it always did.
 ## What R-77 left behind — dated, and it can come out
 
 Until the address moved, this hostname served R-77, and browsers keep what
-an origin wrote after the origin changes hands. Two pieces clean that up.
-Both name R-77, which the scan otherwise never does — a dated exception,
-not a precedent: the old origin was R-77's, so its leftovers are R-77's.
-Both can come out once they have had time to reach everyone.
+an origin wrote after the origin changes hands. Three pieces clean that up:
+the retirement worker, the head script's rescue of a worker it left wedged,
+and the page's sweep. They are about R-77, which the scan otherwise never
+touches — a dated exception, not a precedent: the old origin was R-77's, so
+its leftovers are R-77's. All three can come out once they have had time to
+reach everyone.
 
 **`sw.js` IS A RETIREMENT WORKER, AND THE PAGE NEVER REGISTERS IT.** It
 replaces R-77's old worker in browsers that still hold one here, through the
@@ -417,9 +419,33 @@ the page, so it does not count against "one HTML file".
   activation finishes, and activation is waiting on that promise: the worker
   sits in `activating` forever and nothing is shown. The first draft did
   exactly this, and only a real install of R-77's worker caught it.
+- **NOTHING AWAITED INSIDE `activate` MAY BE UNBOUNDED**, and this is the
+  general form of the rule above. A worker stuck in `activating` holds EVERY
+  navigation on this origin — and the desktop app launches at this origin,
+  so it held its launch: a white window at every start, surviving restarts,
+  with only a hard reload getting past it, once. The first release awaited
+  `getNotifications()`, which the desktop app never settles (it does not
+  implement persistent notifications — no rejection, nothing), so every
+  installed copy that held R-77's worker wedged on its second launch. It is
+  now raced against a 2s timeout.
 - Verify changes in a profile that **holds R-77's old worker** — install the
   real built one on a local origin, then swap this in. A fresh profile
-  proves nothing, because nothing ever registers this file there.
+  proves nothing, because nothing ever registers this file there. **And
+  verify in the desktop app, not only in Chrome**: the wedge above passed a
+  careful Chrome verification, because Chrome answers the call.
+
+**THE HEAD SCRIPT RESCUES A WORKER THAT NEVER FINISHED ARRIVING.** A copy
+wedged by that first release never fetches the fixed `sw.js` — the update
+check rides the very navigation being held — so the page does it: loaded
+with no controller while a registration's active worker is still
+`activating`, it unregisters that registration, and the next ordinary load
+is not held. That combination is the signature of a load that bypassed a
+stuck worker (a hard reload); a healthy retirement is never touched, since
+the page it runs in is controlled and a worker waiting on its notification
+click finished activating long ago. It sits in the head, AFTER the forward,
+because on a device with a remembered sector the head script is the only
+code that ever runs — and it has been checked to finish even when the
+forward fails at once. Nothing in it is awaited.
 
 **THE PAGE SWEEPS EVERY `vl-` AND `vl_` localStorage KEY**, which are all
 R-77's, and the old message-history database (the desktop shell kept one and

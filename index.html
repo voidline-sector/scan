@@ -51,6 +51,42 @@
     }
   } catch (e) { /* no storage (private mode, blocked): show the scan */ }
 })();
+
+/* ── A WORKER THAT NEVER FINISHED ARRIVING ────────────────────────────────
+   This page never registers a worker, so any registration on this origin is
+   R-77's: its old app worker, or the retirement worker (sw.js) replacing it.
+   The first sw.js could hang in `activate` on a host that never answers
+   getNotifications — the desktop app is one — and a worker stuck in
+   `activating` holds EVERY navigation on this origin: a blank window at
+   every launch. The fixed sw.js cannot reach such a device, because the
+   update check that would fetch it never runs while the navigation it rides
+   on is being held.
+
+   So the page does it. The only way this page runs on such a device is a
+   load that BYPASSED the worker (a hard reload), and that is the signature:
+   no controller, and a registration whose active worker is still
+   `activating`. Unregistering it there is permanent — the next ordinary load
+   is not held. A healthy retirement is never touched: the page it runs in is
+   controlled, and one waiting on its notification click finished activating
+   long ago.
+
+   Here in the head because on a device that forwards, this script is the
+   only code that ever runs; after the forward because the forward is
+   optimised to the millisecond and this is not. Nothing here is awaited. It
+   is dated with the rest of R-77's leftovers and comes out with them. */
+(function () {
+  try {
+    var sw = navigator.serviceWorker;
+    if (!sw || sw.controller) return;
+    sw.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) {
+        if (r.active && r.active.state === "activating") {
+          r.unregister().catch(function () {});
+        }
+      });
+    }, function () {});
+  } catch (e) { /* no service workers here: nothing to rescue */ }
+})();
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

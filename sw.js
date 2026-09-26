@@ -94,9 +94,21 @@ function dropDb(name) {
   });
 }
 
+/* BOUNDED, AND THAT IS LOAD-BEARING. A host that does not implement
+   persistent notifications (the desktop app is one) never settles
+   getNotifications at all — not a rejection, nothing. Awaited bare, retire()
+   never finishes, the worker sits in `activating` for good, and every
+   navigation on this origin waits on it: a blank window at every launch.
+   Nothing awaited inside activate may be unbounded. Two seconds is far past
+   any real answer; no answer means nothing is showing. */
 async function showing() {
-  try { return (await self.registration.getNotifications({ tag: TAG })).length > 0; }
-  catch (e) { return false; }
+  try {
+    var found = await Promise.race([
+      self.registration.getNotifications({ tag: TAG }),
+      new Promise(function (done) { setTimeout(function () { done(null); }, 2000); })
+    ]);
+    return !!found && found.length > 0;
+  } catch (e) { return false; }
 }
 
 self.addEventListener("notificationclick", function (event) {
